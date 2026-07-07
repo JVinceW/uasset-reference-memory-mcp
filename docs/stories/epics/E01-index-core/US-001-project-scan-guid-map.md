@@ -2,7 +2,7 @@
 
 ## Status
 
-planned
+implemented
 
 ## Lane
 
@@ -62,4 +62,17 @@ Establishes the fixture Unity project used by later integration tests.
 
 ## Evidence
 
-Add after implementation.
+- `npm test` — 45 tests pass across 4 files (`meta-parse`, `asset-type`,
+  `origin` unit tests; `meta-scanner` integration over a real temp fixture tree).
+- `npm run typecheck` — clean (`tsc --noEmit`).
+- Durable proof recorded: `story verify US-001` = pass; unit=1, integration=1.
+- Modules: `src/indexer/{meta-parse,asset-type,origin,meta-scanner,types}.ts`.
+
+### Boundary notes carried to later stories
+
+- `origin` is minimal here (project vs package by path prefix). **US-004** adds
+  `package_id` parsing and pre-seeded `builtin` nodes.
+- `Sprite` vs `Texture` is not yet split (images map to `Texture`); refine via
+  `TextureImporter` sprite mode when needed.
+- `isBinary` encodes "not a scannable YAML asset" per the schema's documented
+  meaning, so `.cs`/`.shader` are `isBinary=true` (no guid refs to scan).
