@@ -72,7 +72,11 @@ export interface UnresolvedRef {
   context: string | null;
 }
 
-export type ScanWarningKind = "orphan-meta" | "missing-meta" | "invalid-meta";
+export type ScanWarningKind =
+  | "orphan-meta"
+  | "missing-meta"
+  | "invalid-meta"
+  | "unreadable-asset";
 
 export interface ScanWarning {
   kind: ScanWarningKind;

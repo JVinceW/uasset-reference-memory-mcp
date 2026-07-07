@@ -1,17 +1,15 @@
-import { copyFile, rename, rm, stat } from "node:fs/promises";
+import { copyFile, readFile, rename, rm, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { GraphStore } from "../store/graph-store.js";
 import { scanProject } from "./meta-scanner.js";
+import { extractReferences, kindFor, type Resolver } from "./ref-extractor.js";
 import { SCHEMA_VERSION } from "../store/schema.js";
-import type { AssetNode, ScanResult, ScanWarning } from "./types.js";
+import type { AssetNode, AssetType, Edge, ScanResult, ScanWarning, UnresolvedRef } from "./types.js";
 
 export interface IndexOptions {
-  /** Destination SQLite file. */
   dbPath: string;
-  /** Rebuild from scratch instead of incremental. */
   force?: boolean;
-  /** Optional Unity version to stamp in index_meta. */
   unityVersion?: string;
-  /** Injectable scanner (defaults to scanProject); used for testing. */
   scan?: (projectRoot: string) => Promise<ScanResult>;
 }
 
@@ -26,11 +24,22 @@ export interface IndexSummary {
   unchanged: number;
 }
 
+/** Thrown when an expected-text asset is binary-serialized (Force Text is off). */
+export class BinarySerializationError extends Error {
+  constructor(public readonly path: string) {
+    super(
+      `binary serialization detected at ${path}: this project uses binary asset ` +
+        `serialization. Set Edit > Project Settings > Editor > Asset Serialization ` +
+        `to "Force Text" and re-import.`,
+    );
+    this.name = "BinarySerializationError";
+  }
+}
+
 /**
- * Index a Unity project into the SQLite store. Builds into a temp file and
- * atomically swaps it into place, so an interrupted or failing run leaves any
- * prior index untouched (US-003). Default mode is incremental by mtime; `force`
- * rebuilds from scratch.
+ * Index a Unity project into the SQLite store (US-001..US-003 nodes + US-002
+ * edges). Builds into a temp file and atomically swaps, so a failing run leaves
+ * any prior index intact. Incremental by mtime; `force` rebuilds from scratch.
  */
 export async function indexProject(
   projectRoot: string,
@@ -41,18 +50,18 @@ export async function indexProject(
   const tempPath = `${dbPath}.building-${process.pid}`;
 
   await cleanupDbFiles(tempPath);
-
   const incremental = !opts.force && (await fileExists(dbPath));
   if (incremental) await copyFile(dbPath, tempPath);
 
   const store = GraphStore.open(tempPath);
-  let counts: Pick<IndexSummary, "added" | "updated" | "removed" | "unchanged">;
-  let result: ScanResult;
   try {
-    result = await scan(projectRoot);
-    counts = incremental
-      ? applyIncremental(store, result.nodes)
-      : applyFresh(store, result.nodes);
+    const result = await scan(projectRoot);
+    const resolve = buildResolver(result.nodes);
+    const warnings = [...result.warnings];
+
+    const counts = incremental
+      ? await applyIncremental(store, projectRoot, result.nodes, resolve, warnings)
+      : await applyFresh(store, projectRoot, result.nodes, resolve, warnings);
 
     store.setMeta("schema_version", String(SCHEMA_VERSION));
     store.setMeta("project_root", projectRoot);
@@ -64,7 +73,7 @@ export async function indexProject(
       assetCount: store.assetCount(),
       edgeCount: store.edgeCount(),
       unresolvedCount: store.unresolvedCount(),
-      warnings: result.warnings,
+      warnings,
       ...counts,
     };
 
@@ -79,37 +88,41 @@ export async function indexProject(
   }
 }
 
-function applyFresh(
+type ChangeCounts = Pick<IndexSummary, "added" | "updated" | "removed" | "unchanged">;
+
+async function applyFresh(
   store: GraphStore,
+  projectRoot: string,
   nodes: AssetNode[],
-): Pick<IndexSummary, "added" | "updated" | "removed" | "unchanged"> {
+  resolve: Resolver,
+  warnings: ScanWarning[],
+): Promise<ChangeCounts> {
   store.upsertNodes(nodes);
+  const { edges, unresolved } = await extractAll(projectRoot, nodes, resolve, warnings);
+  store.insertEdges(edges);
+  store.insertUnresolved(unresolved);
   return { added: nodes.length, updated: 0, removed: 0, unchanged: 0 };
 }
 
-function applyIncremental(
+async function applyIncremental(
   store: GraphStore,
+  projectRoot: string,
   nodes: AssetNode[],
-): Pick<IndexSummary, "added" | "updated" | "removed" | "unchanged"> {
+  resolve: Resolver,
+  warnings: ScanWarning[],
+): Promise<ChangeCounts> {
   const prior = store.getNodeMtimes();
   const currentPaths = new Set<string>();
-  const toUpsert: AssetNode[] = [];
-  let added = 0;
-  let updated = 0;
+  const addedNodes: AssetNode[] = [];
+  const updatedNodes: AssetNode[] = [];
   let unchanged = 0;
 
   for (const n of nodes) {
     currentPaths.add(n.path);
     const p = prior.get(n.path);
-    if (!p) {
-      added++;
-      toUpsert.push(n);
-    } else if (p.mtime !== n.mtime) {
-      updated++;
-      toUpsert.push(n);
-    } else {
-      unchanged++;
-    }
+    if (!p) addedNodes.push(n);
+    else if (p.mtime !== n.mtime) updatedNodes.push(n);
+    else unchanged++;
   }
 
   const removedGuids: string[] = [];
@@ -117,15 +130,68 @@ function applyIncremental(
     if (!currentPaths.has(path)) removedGuids.push(info.guid);
   }
 
-  store.upsertNodes(toUpsert);
+  // Nodes: upsert changed, then handle removals (demote inbound, drop node).
+  store.upsertNodes([...addedNodes, ...updatedNodes]);
+  for (const guid of removedGuids) store.demoteIncomingToUnresolved(guid);
+  store.deleteOutgoing(removedGuids);
   store.deleteNodesByGuid(removedGuids);
-  return { added, updated, removed: removedGuids.length, unchanged };
+
+  // Edges: promote inbound for new targets, re-extract outbound for changed files.
+  for (const n of addedNodes) store.promoteUnresolved(n.guid, kindFor(n.assetType));
+  store.deleteOutgoing(updatedNodes.map((n) => n.guid));
+  const changed = [...addedNodes, ...updatedNodes];
+  const { edges, unresolved } = await extractAll(projectRoot, changed, resolve, warnings);
+  store.insertEdges(edges);
+  store.insertUnresolved(unresolved);
+
+  return {
+    added: addedNodes.length,
+    updated: updatedNodes.length,
+    removed: removedGuids.length,
+    unchanged,
+  };
+}
+
+async function extractAll(
+  projectRoot: string,
+  nodes: AssetNode[],
+  resolve: Resolver,
+  warnings: ScanWarning[],
+): Promise<{ edges: Edge[]; unresolved: UnresolvedRef[] }> {
+  const edges: Edge[] = [];
+  const unresolved: UnresolvedRef[] = [];
+
+  for (const node of nodes) {
+    if (node.isBinary) continue; // folders and non-YAML assets
+    let content: string;
+    try {
+      content = await readFile(join(projectRoot, node.path), "utf8");
+    } catch {
+      warnings.push({
+        kind: "unreadable-asset",
+        path: node.path,
+        message: `could not read asset for reference extraction: ${node.path}`,
+      });
+      continue;
+    }
+
+    const res = extractReferences(content, node.guid, resolve);
+    if (res.binarySerialized) throw new BinarySerializationError(node.path);
+    edges.push(...res.edges);
+    unresolved.push(...res.unresolved);
+  }
+
+  return { edges, unresolved };
+}
+
+function buildResolver(nodes: AssetNode[]): Resolver {
+  const typeByGuid = new Map<string, AssetType>();
+  for (const n of nodes) typeByGuid.set(n.guid, n.assetType);
+  return (guid: string) => typeByGuid.get(guid) ?? null;
 }
 
 async function swapIntoPlace(tempPath: string, dbPath: string): Promise<void> {
   await rename(tempPath, dbPath);
-  // The renamed file is a fully checkpointed single db; drop any stale sidecars
-  // of the destination so a subsequent open never replays an old WAL.
   await rm(`${dbPath}-wal`, { force: true });
   await rm(`${dbPath}-shm`, { force: true });
 }

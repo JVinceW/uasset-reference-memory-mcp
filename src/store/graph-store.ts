@@ -144,6 +144,50 @@ export class GraphStore {
     return (this.db.prepare("SELECT COUNT(*) AS n FROM edges").get() as { n: number }).n;
   }
 
+  /** Remove all edges and unresolved refs originating from the given guids. */
+  deleteOutgoing(guids: string[]): void {
+    const delEdges = this.db.prepare("DELETE FROM edges WHERE from_guid = ?");
+    const delUnres = this.db.prepare("DELETE FROM unresolved_refs WHERE from_guid = ?");
+    const tx = this.db.transaction((items: string[]) => {
+      for (const g of items) {
+        delEdges.run(g);
+        delUnres.run(g);
+      }
+    });
+    tx(guids);
+  }
+
+  /** Move edges pointing at `guid` into unresolved_refs (target no longer exists). */
+  demoteIncomingToUnresolved(guid: string): void {
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `INSERT INTO unresolved_refs (from_guid, to_guid, context)
+           SELECT from_guid, to_guid, context FROM edges WHERE to_guid = ?`,
+        )
+        .run(guid);
+      this.db.prepare("DELETE FROM edges WHERE to_guid = ?").run(guid);
+    });
+    tx();
+  }
+
+  /** Move unresolved refs pointing at `guid` into typed edges (target now exists). */
+  promoteUnresolved(guid: string, refKind: string): void {
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `INSERT INTO edges (from_guid, to_guid, ref_kind, file_id, context, count)
+           SELECT from_guid, to_guid, ?, NULL, context, 1
+           FROM unresolved_refs WHERE to_guid = ?
+           ON CONFLICT(from_guid, to_guid, ref_kind, context)
+             DO UPDATE SET count = count + 1`,
+        )
+        .run(refKind, guid);
+      this.db.prepare("DELETE FROM unresolved_refs WHERE to_guid = ?").run(guid);
+    });
+    tx();
+  }
+
   // --- unresolved -----------------------------------------------------------
 
   insertUnresolved(refs: UnresolvedRef[]): void {

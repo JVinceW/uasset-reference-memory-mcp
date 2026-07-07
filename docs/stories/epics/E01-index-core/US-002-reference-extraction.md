@@ -2,7 +2,7 @@
 
 ## Status
 
-planned
+implemented
 
 ## Lane
 
@@ -62,4 +62,26 @@ None expected.
 
 ## Evidence
 
-Add after implementation.
+- `npm test` — 76 tests pass (10 files). New: `ref-extractor` (typed ref_kind,
+  array/`m_Script` context, unresolved routing, dup-count collapse, self/zero-guid
+  skip, binary-header detection), `graph-store-edges` (deleteOutgoing,
+  demote/promote), `index-project-edges` (fresh edges+unresolved, binary loud
+  failure, incremental demote-on-remove and promote-on-add).
+- `npm run typecheck` clean; `npm run build` ok.
+- **End-to-end** on the fixture via the built CLI: `edges: 3, unresolved: 1`.
+  Bare `sqlite3` join showed the chain
+  `Player.prefab →(USES_MATERIAL) body.mat →(USES_TEXTURE) skin.png` and
+  `Player.prefab →(USES_SCRIPT) Player.cs`; the missing shader guid landed in
+  `unresolved_refs` with context `m_Shader`.
+
+### Notes / boundaries
+
+- `ref_kind` typed by target `asset_type`; `context` is best-effort YAML key
+  (same-line key, else nearest array key).
+- Binary serialization (missing `%YAML` header) throws `BinarySerializationError`
+  with Force-Text guidance; the atomic build leaves any prior index intact.
+- Incremental keeps cross-file consistency: deleting a target demotes inbound
+  edges to unresolved; adding a target promotes matching unresolved to edges.
+  `--force` remains the fully-consistent rebuild.
+- References to Unity **builtin** assets and package ids stay unresolved until
+  **US-004** seeds builtins / parses `package_id`.
