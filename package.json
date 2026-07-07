@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "MCP server that indexes a Unity project's assets into a reusable SQLite reference graph.",
+  "bin": {
+    "asset-reference-mcp": "dist/cli/main.js"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
@@ -14,8 +17,12 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.10.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1"
   }
 }

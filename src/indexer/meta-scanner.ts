@@ -100,7 +100,7 @@ async function buildNode(
     origin: classifyOrigin(relPath),
     packageId: null,
     fileSize: isDir ? null : info.size,
-    mtime: info.mtimeMs,
+    mtime: Math.floor(info.mtimeMs),
     isBinary: isDir ? true : !isYamlAsset(relPath),
   };
 }

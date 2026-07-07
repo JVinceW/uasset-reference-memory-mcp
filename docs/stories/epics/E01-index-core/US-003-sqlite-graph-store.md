@@ -2,7 +2,7 @@
 
 ## Status
 
-planned
+implemented
 
 ## Lane
 
@@ -63,4 +63,24 @@ May add a decision record for the Node SQLite driver choice.
 
 ## Evidence
 
-Add after implementation.
+- `npm test` — 62 tests pass (7 files). New: `store/schema`, `store/graph-store`
+  (schema/upsert/edges/unresolved/meta/mtime-map), `indexer/index-project`
+  (fresh, incremental add/update/remove/unchanged, force, atomic-swap-on-failure),
+  `cli/parse-args`.
+- `npm run typecheck` clean; `npm run build` produces `dist/`.
+- **End-to-end on a fixture Unity project** via the built CLI
+  (`node dist/cli/main.js index <root>`): 9 nodes with correct types/origins,
+  3 expected warnings, incremental re-run reported `+0 ~0 -0 =9`.
+- **Reusability proven**: the output `.asset-memory/index.db` was queried with a
+  bare `sqlite3` CLI (no custom extensions) — `index_meta` holds
+  `schema_version=1`, `project_root`, `indexed_at`, `asset_count`.
+- Driver decision recorded: `docs/decisions/0008-node-sqlite-driver.md`
+  (better-sqlite3; `node:sqlite` is the documented fallback, isolated behind
+  `src/store/graph-store.ts`).
+
+### Notes / boundaries
+
+- `edges`/`unresolved_refs` tables and write paths exist and are unit-tested, but
+  are populated by the ref-extractor in **US-002** (edges=0 until then).
+- Atomicity: build into `<db>.building-<pid>`, checkpoint-truncate, then
+  `rename` swap; a failing scan leaves the prior index intact (tested).
