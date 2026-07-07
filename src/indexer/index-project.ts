@@ -2,6 +2,7 @@ import { copyFile, readFile, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { GraphStore } from "../store/graph-store.js";
 import { scanProject } from "./meta-scanner.js";
+import { BUILTIN_NODES } from "./builtins.js";
 import { extractReferences, kindFor, type Resolver } from "./ref-extractor.js";
 import { SCHEMA_VERSION } from "../store/schema.js";
 import type { AssetNode, AssetType, Edge, ScanResult, ScanWarning, UnresolvedRef } from "./types.js";
@@ -56,8 +57,12 @@ export async function indexProject(
   const store = GraphStore.open(tempPath);
   try {
     const result = await scan(projectRoot);
-    const resolve = buildResolver(result.nodes);
+    // Built-in sentinel guids resolve against synthetic nodes so references to
+    // them are edges, not broken refs (US-004). They are stored as infrastructure
+    // but excluded from the user-facing change counts.
+    const resolve = buildResolver([...BUILTIN_NODES, ...result.nodes]);
     const warnings = [...result.warnings];
+    store.upsertNodes([...BUILTIN_NODES]);
 
     const counts = incremental
       ? await applyIncremental(store, projectRoot, result.nodes, resolve, warnings)
@@ -68,6 +73,8 @@ export async function indexProject(
     store.setMeta("indexed_at", new Date().toISOString());
     store.setMeta("asset_count", String(store.assetCount()));
     if (opts.unityVersion) store.setMeta("unity_version", opts.unityVersion);
+    const lockMtime = await lockfileMtime(projectRoot);
+    if (lockMtime !== null) store.setMeta("packages_lock_mtime", String(lockMtime));
 
     const summary: IndexSummary = {
       assetCount: store.assetCount(),
@@ -125,9 +132,10 @@ async function applyIncremental(
     else unchanged++;
   }
 
+  const builtinGuids = new Set(BUILTIN_NODES.map((n) => n.guid));
   const removedGuids: string[] = [];
   for (const [path, info] of prior) {
-    if (!currentPaths.has(path)) removedGuids.push(info.guid);
+    if (!currentPaths.has(path) && !builtinGuids.has(info.guid)) removedGuids.push(info.guid);
   }
 
   // Nodes: upsert changed, then handle removals (demote inbound, drop node).
@@ -200,6 +208,16 @@ async function cleanupDbFiles(path: string): Promise<void> {
   await rm(path, { force: true });
   await rm(`${path}-wal`, { force: true });
   await rm(`${path}-shm`, { force: true });
+}
+
+/** mtime (epoch ms, floored) of Packages/packages-lock.json, or null if absent. */
+async function lockfileMtime(projectRoot: string): Promise<number | null> {
+  try {
+    const info = await stat(join(projectRoot, "Packages", "packages-lock.json"));
+    return Math.floor(info.mtimeMs);
+  } catch {
+    return null;
+  }
 }
 
 async function fileExists(path: string): Promise<boolean> {

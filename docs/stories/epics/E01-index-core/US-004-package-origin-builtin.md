@@ -2,7 +2,7 @@
 
 ## Status
 
-planned
+implemented
 
 ## Lane
 
@@ -62,4 +62,28 @@ file and note it if it becomes friction.
 
 ## Evidence
 
-Add after implementation.
+- `npm test` — 88 tests pass (12 files). New: `packages` (parsePackageId,
+  BUILTIN_NODES), scanner `package_id` assertion, `index-project-builtins`
+  (builtin refs resolve to edges not unresolved; builtins persist across
+  incremental; `packages_lock_mtime` recorded).
+- `npm run typecheck` clean; `npm run build` ok.
+- **End-to-end** on the fixture: pointing `body.mat`'s `m_Shader` at the real
+  sentinel guid `0000000000000000f000000000000000` → `unresolved: 0` (was 1),
+  origin breakdown `builtin 2 / package 1 / project 8`, edge
+  `body.mat → unity_builtin_extra (builtin, SERIALIZED_REF)`, `Widget.asset`
+  `package_id = com.acme.tools`, `packages_lock_mtime` present in `index_meta`.
+
+### Notes / boundaries
+
+- Builtins are stored as infrastructure nodes (origin=builtin), resolvable and
+  never removed on incremental, but **excluded from the user-facing change
+  counts** (added/updated/removed/unchanged track real assets only).
+- Builtin refs type as `SERIALIZED_REF` because a builtin guid holds many object
+  types and we model at GUID granularity (no fileID→type map). Acceptable;
+  documented.
+- `package_id` is parsed from the path segment (PackageCache carries `@version`;
+  embedded `Packages/` gives the bare name). Not enriched from `package.json`.
+- `index_status` staleness check itself lands in E02; US-004 records
+  `packages_lock_mtime` so that tool can compare.
+- Follow-up logged (backlog): `Packages/` root non-assets (`packages-lock.json`,
+  `manifest.json`) are flagged `missing-meta`.

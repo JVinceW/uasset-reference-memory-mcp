@@ -34,12 +34,12 @@ describe("indexProject fresh build", () => {
     await writeAsset("Assets/B.prefab", "b".repeat(32));
 
     const summary = await indexProject(root, { dbPath });
-    expect(summary.assetCount).toBe(2);
+    expect(summary.assetCount).toBe(4); // 2 assets + 2 builtin nodes
 
     const store = GraphStore.open(dbPath);
-    expect(store.assetCount()).toBe(2);
+    expect(store.assetCount()).toBe(4);
     expect(store.getMeta("project_root")).toBe(root);
-    expect(store.getMeta("asset_count")).toBe("2");
+    expect(store.getMeta("asset_count")).toBe("4");
     expect(store.getMeta("indexed_at")).not.toBeNull();
     store.close();
   });
@@ -73,7 +73,7 @@ describe("indexProject incremental", () => {
     expect(summary.unchanged).toBe(1); // D
 
     const store = GraphStore.open(dbPath);
-    expect(store.assetCount()).toBe(3); // B, C, D
+    expect(store.assetCount()).toBe(5); // B, C, D + 2 builtin nodes
     expect(store.getNode("a".repeat(32))).toBeNull();
     store.close();
   });
@@ -104,7 +104,7 @@ describe("indexProject atomicity", () => {
     ).rejects.toThrow("boom");
 
     const store = GraphStore.open(dbPath);
-    expect(store.assetCount()).toBe(1);
+    expect(store.assetCount()).toBe(3); // 1 asset + 2 builtin nodes
     store.close();
   });
 });

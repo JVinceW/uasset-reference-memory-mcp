@@ -99,6 +99,11 @@ describe("scanProject", () => {
     expect(byName("Player.prefab")?.origin).toBe("project");
   });
 
+  test("parses package_id for package assets and leaves it null for project assets", () => {
+    expect(byName("Widget.asset")?.packageId).toBe("com.foo.bar");
+    expect(byName("Player.prefab")?.packageId).toBeNull();
+  });
+
   test("warns on a meta without its asset (orphan-meta)", () => {
     expect(
       result.warnings.some(

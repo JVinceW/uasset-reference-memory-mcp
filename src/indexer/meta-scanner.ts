@@ -2,7 +2,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { classifyAssetType, isYamlAsset } from "./asset-type.js";
 import { parseGuid, parseImporterType } from "./meta-parse.js";
-import { classifyOrigin } from "./origin.js";
+import { classifyOrigin, parsePackageId } from "./origin.js";
 import type { AssetNode, ScanResult, ScanWarning } from "./types.js";
 
 const META_SUFFIX = ".meta";
@@ -98,7 +98,7 @@ async function buildNode(
     name,
     assetType: classifyAssetType(relPath, importerType),
     origin: classifyOrigin(relPath),
-    packageId: null,
+    packageId: parsePackageId(relPath),
     fileSize: isDir ? null : info.size,
     mtime: Math.floor(info.mtimeMs),
     isBinary: isDir ? true : !isYamlAsset(relPath),
