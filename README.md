@@ -23,11 +23,25 @@ Force Text** (Unity's default for version control).
 ## Install
 
 ```bash
-# global CLI + servers
 npm install -g unity-asset-reference-mcp
+```
 
-# or run on demand with npx (no install)
-npx unity-asset-reference-mcp-index index /path/to/UnityProject
+This puts three commands on your `PATH`:
+
+| Command | What |
+| --- | --- |
+| `unity-asset-reference-mcp-index` | the CLI indexer |
+| `unity-asset-reference-mcp` | the MCP server |
+| `unity-asset-reference-mcp-web` | the web viewer |
+
+**Without a global install (npx):** the MCP server's bin name matches the package,
+so `npx -y unity-asset-reference-mcp …` works directly. For the other two bins,
+name the package with `-p`:
+
+```bash
+npx -y unity-asset-reference-mcp --project /path/to/UnityProject          # MCP server
+npx -y -p unity-asset-reference-mcp unity-asset-reference-mcp-index index /path   # indexer
+npx -y -p unity-asset-reference-mcp unity-asset-reference-mcp-web --db <index.db> # viewer
 ```
 
 ## 1. Index a project

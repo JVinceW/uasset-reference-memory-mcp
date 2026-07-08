@@ -1,6 +1,6 @@
 {
   "name": "unity-asset-reference-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Index a Unity project's assets into a reusable SQLite reference graph — impact analysis, unused-asset detection, dependency tracing, and an MCP server + web viewer. Unity-only.",
   "keywords": [
