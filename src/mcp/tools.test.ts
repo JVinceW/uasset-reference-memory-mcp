@@ -75,7 +75,7 @@ describe("runTool", () => {
   test("index_status reports the store meta", async () => {
     const s = (await runTool(ctx, "index_status")) as { assetCount: number; schemaVersion: string };
     expect(s.assetCount).toBe(4);
-    expect(s.schemaVersion).toBe("1");
+    expect(s.schemaVersion).toBe("2");
   });
 
   test("read tools error cleanly when no index exists", async () => {

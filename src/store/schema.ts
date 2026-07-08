@@ -3,7 +3,7 @@
  * tool reads these tables directly. See docs/product/asset-graph-model.md.
  * Bump SCHEMA_VERSION on any breaking change and record it in a decision.
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS assets (
@@ -42,5 +42,10 @@ CREATE TABLE IF NOT EXISTS unresolved_refs (
 CREATE TABLE IF NOT EXISTS index_meta (
   key   TEXT PRIMARY KEY,
   value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS addressable_entries (
+  guid    TEXT PRIMARY KEY,
+  address TEXT
 );
 `;

@@ -5,6 +5,7 @@ import { scanProject } from "./meta-scanner.js";
 import { BUILTIN_NODES } from "./builtins.js";
 import { readSerializationMode } from "./project-settings.js";
 import { extractReferences, kindFor, type Resolver } from "./ref-extractor.js";
+import { extractAddressableEntries, type AddressableEntry } from "./addressables.js";
 import { SCHEMA_VERSION } from "../store/schema.js";
 import type { AssetNode, AssetType, Edge, ScanResult, ScanWarning, UnresolvedRef } from "./types.js";
 
@@ -112,9 +113,10 @@ async function applyFresh(
   warnings: ScanWarning[],
 ): Promise<ChangeCounts> {
   store.upsertNodes(nodes);
-  const { edges, unresolved } = await extractAll(projectRoot, nodes, resolve, warnings);
+  const { edges, unresolved, addressables } = await extractAll(projectRoot, nodes, resolve, warnings);
   store.insertEdges(edges);
   store.insertUnresolved(unresolved);
+  store.insertAddressableEntries(addressables);
   return { added: nodes.length, updated: 0, removed: 0, unchanged: 0 };
 }
 
@@ -155,9 +157,10 @@ async function applyIncremental(
   for (const n of addedNodes) store.promoteUnresolved(n.guid, kindFor(n.assetType));
   store.deleteOutgoing(updatedNodes.map((n) => n.guid));
   const changed = [...addedNodes, ...updatedNodes];
-  const { edges, unresolved } = await extractAll(projectRoot, changed, resolve, warnings);
+  const { edges, unresolved, addressables } = await extractAll(projectRoot, changed, resolve, warnings);
   store.insertEdges(edges);
   store.insertUnresolved(unresolved);
+  store.insertAddressableEntries(addressables);
 
   return {
     added: addedNodes.length,
@@ -172,9 +175,10 @@ async function extractAll(
   nodes: AssetNode[],
   resolve: Resolver,
   warnings: ScanWarning[],
-): Promise<{ edges: Edge[]; unresolved: UnresolvedRef[] }> {
+): Promise<{ edges: Edge[]; unresolved: UnresolvedRef[]; addressables: AddressableEntry[] }> {
   const edges: Edge[] = [];
   const unresolved: UnresolvedRef[] = [];
+  const addressables: AddressableEntry[] = [];
 
   for (const node of nodes) {
     if (node.isBinary) continue; // folders and non-YAML assets
@@ -203,9 +207,10 @@ async function extractAll(
     }
     edges.push(...res.edges);
     unresolved.push(...res.unresolved);
+    addressables.push(...extractAddressableEntries(content));
   }
 
-  return { edges, unresolved };
+  return { edges, unresolved, addressables };
 }
 
 function buildResolver(nodes: AssetNode[]): Resolver {

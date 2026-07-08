@@ -231,4 +231,21 @@ export class GraphStore implements QueryDb {
       .n;
   }
 
+  // --- addressables ---------------------------------------------------------
+
+  insertAddressableEntries(entries: { guid: string; address: string }[]): void {
+    const stmt = this.db.prepare(
+      "INSERT OR REPLACE INTO addressable_entries (guid, address) VALUES (?, ?)",
+    );
+    const tx = this.db.transaction((items: { guid: string; address: string }[]) => {
+      for (const e of items) stmt.run(e.guid, e.address);
+    });
+    tx(entries);
+  }
+
+  addressableCount(): number {
+    return (this.db.prepare("SELECT COUNT(*) AS n FROM addressable_entries").get() as { n: number })
+      .n;
+  }
+
 }
