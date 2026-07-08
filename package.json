@@ -15,7 +15,15 @@
     "gamedev"
   ],
   "license": "MIT",
-  "author": "ll-vince-ws",
+  "author": "JVinceW",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JVinceW/uasset-reference-memory-mcp.git"
+  },
+  "homepage": "https://github.com/JVinceW/uasset-reference-memory-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/JVinceW/uasset-reference-memory-mcp/issues"
+  },
   "bin": {
     "unity-asset-reference-mcp": "dist/mcp/server.js",
     "unity-asset-reference-mcp-index": "dist/cli/main.js",

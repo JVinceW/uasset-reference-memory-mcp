@@ -31,3 +31,9 @@ scripts/bin/harness-cli.exe
 dist/
 spotcheck.mjs
 spot-*.mjs
+
+# npm pack artifacts.
+*.tgz
+
+# Tool index output (when indexing a project that lives inside this repo).
+.asset-memory/
