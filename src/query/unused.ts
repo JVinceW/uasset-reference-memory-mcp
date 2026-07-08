@@ -1,0 +1,61 @@
+import { GraphStore, type AssetRow } from "../store/graph-store.js";
+import { resolveRef } from "./traverse.js";
+import type { AssetNode } from "../indexer/types.js";
+
+export interface UnusedOptions {
+  /** Restrict results to assets whose path starts with this prefix. */
+  scope?: string;
+  /** Explicit entry-point refs; defaults to all Scenes + Resources/ assets. */
+  roots?: string[];
+  /** Include Script assets (off by default: code refs aren't in the graph). */
+  includeScripts?: boolean;
+}
+
+/**
+ * Project-origin assets not reachable from any root entry point (US-006).
+ * Roots default to all Scenes and everything under a `Resources/` folder.
+ * Folders (and Scripts, unless `includeScripts`) are excluded to avoid noise.
+ * Sorted by file size descending — biggest cleanup wins first.
+ */
+export function findUnusedAssets(store: GraphStore, opts: UnusedOptions = {}): AssetNode[] {
+  const params: unknown[] = [];
+
+  let rootsCte: string;
+  if (opts.roots) {
+    const guids = opts.roots
+      .map((r) => resolveRef(store, r).node?.guid)
+      .filter((g): g is string => Boolean(g));
+    rootsCte = "SELECT value AS guid FROM json_each(?)";
+    params.push(JSON.stringify(guids));
+  } else {
+    rootsCte = "SELECT guid FROM assets WHERE asset_type = 'Scene' OR path LIKE '%/Resources/%'";
+  }
+
+  const excludedTypes = opts.includeScripts ? ["Folder"] : ["Folder", "Script"];
+  const typePlaceholders = excludedTypes.map(() => "?").join(", ");
+  params.push(...excludedTypes);
+
+  let scopeClause = "";
+  if (opts.scope) {
+    scopeClause = "AND a.path LIKE ?";
+    params.push(`${opts.scope}%`);
+  }
+
+  const sql = `
+    WITH RECURSIVE
+      roots(guid) AS (${rootsCte}),
+      reach(guid) AS (
+        SELECT guid FROM roots
+        UNION
+        SELECT e.to_guid FROM edges e JOIN reach r ON e.from_guid = r.guid
+      )
+    SELECT a.* FROM assets a
+    WHERE a.origin = 'project'
+      AND a.asset_type NOT IN (${typePlaceholders})
+      AND a.guid NOT IN (SELECT guid FROM reach)
+      ${scopeClause}
+    ORDER BY (a.file_size IS NULL), a.file_size DESC, a.path`;
+
+  const rows = store.db.prepare(sql).all(...params) as AssetRow[];
+  return rows.map(GraphStore.rowToNode);
+}

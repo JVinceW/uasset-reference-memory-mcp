@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema.js";
 import type { AssetNode, AssetType, Edge, Origin, UnresolvedRef } from "../indexer/types.js";
 
-interface AssetRow {
+export interface AssetRow {
   guid: string;
   path: string;
   name: string;
@@ -234,7 +234,7 @@ export class GraphStore {
       .n;
   }
 
-  private static rowToNode(row: AssetRow): AssetNode {
+  static rowToNode(row: AssetRow): AssetNode {
     return {
       guid: row.guid,
       path: row.path,
