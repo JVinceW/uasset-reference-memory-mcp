@@ -8,10 +8,17 @@ export interface ProjectConfig {
     /** Whether to treat Addressable entries as roots: auto (if present) | on | off. */
     addressableRoots: AddressableRoots;
   };
+  scan: {
+    /** User glob patterns to ignore (added to built-in rules unless disabled). */
+    ignore: string[];
+    /** Apply the built-in Unity ignore rules (dotfiles, ~-dirs, ...). */
+    ignoreDefaults: boolean;
+  };
 }
 
 export const DEFAULT_CONFIG: ProjectConfig = {
   unused: { addressableRoots: "auto" },
+  scan: { ignore: [], ignoreDefaults: true },
 };
 
 const VALID_ROOTS: AddressableRoots[] = ["auto", "on", "off"];
@@ -24,12 +31,25 @@ export function parseConfig(json: string): ProjectConfig {
   } catch {
     return DEFAULT_CONFIG;
   }
-  const unused = (raw as { unused?: { addressableRoots?: unknown } })?.unused;
-  const roots = unused?.addressableRoots;
+  const obj = raw as {
+    unused?: { addressableRoots?: unknown };
+    scan?: { ignore?: unknown; ignoreDefaults?: unknown };
+  };
+
+  const roots = obj?.unused?.addressableRoots;
   const addressableRoots = VALID_ROOTS.includes(roots as AddressableRoots)
     ? (roots as AddressableRoots)
     : DEFAULT_CONFIG.unused.addressableRoots;
-  return { unused: { addressableRoots } };
+
+  const ignore = Array.isArray(obj?.scan?.ignore)
+    ? obj.scan.ignore.filter((p): p is string => typeof p === "string")
+    : DEFAULT_CONFIG.scan.ignore;
+  const ignoreDefaults =
+    typeof obj?.scan?.ignoreDefaults === "boolean"
+      ? obj.scan.ignoreDefaults
+      : DEFAULT_CONFIG.scan.ignoreDefaults;
+
+  return { unused: { addressableRoots }, scan: { ignore, ignoreDefaults } };
 }
 
 /** Load the project config next to the index db, or defaults if absent/invalid. */

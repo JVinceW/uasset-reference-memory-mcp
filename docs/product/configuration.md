@@ -12,6 +12,10 @@ future per-project settings.
 {
   "unused": {
     "addressableRoots": "auto"
+  },
+  "scan": {
+    "ignore": ["**/StompyRobot/**", "*.bak"],
+    "ignoreDefaults": true
   }
 }
 ```
@@ -36,6 +40,23 @@ Precedence: an explicit per-call value (e.g. MCP `find_unused_assets`
 Measured impact (pudgy-unity, `Assets/lobby.contents/`): `off` → 710 unused
 (~70 MB); `auto` → 1. That folder is almost entirely Addressable-loaded, so
 `off` over-reports ~710×.
+
+### `scan.ignore` — `string[]` (default `[]`) and `scan.ignoreDefaults` — `bool` (default `true`)
+
+Control which files/folders the indexer skips (no node, no warning, no recursion).
+
+- `scan.ignore` — your glob patterns, **added** to the built-in rules. Each
+  pattern is matched against the entry's **base name** and its **project-relative
+  path**, so all of these work: `*.bak`, `Thumbs.db`, `**/Temp`,
+  `Assets/ThirdParty/**`. Globs: `*` = any run except `/`; `**` = any run
+  including `/`.
+- `scan.ignoreDefaults` — keep the built-in Unity rules (hidden dotfiles,
+  `~`-suffixed dirs like `Samples~`, `*.tmp`, `cvs`, `manifest.json`,
+  `packages-lock.json`). Set `false` to disable them and use **only** your
+  patterns.
+
+Unlike `addressableRoots`, the ignore-list is applied at **index time** — it
+changes which assets exist, so editing it requires re-indexing (`--force`).
 
 ## Not yet counted as roots
 

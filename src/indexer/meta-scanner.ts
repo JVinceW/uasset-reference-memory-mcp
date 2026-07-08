@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { classifyAssetType, isYamlAsset } from "./asset-type.js";
 import { parseGuid, parseImporterType } from "./meta-parse.js";
 import { classifyOrigin, parsePackageId } from "./origin.js";
+import { matchesAnyGlob } from "../config/glob.js";
 import type { AssetNode, ScanResult, ScanWarning } from "./types.js";
 
 const META_SUFFIX = ".meta";
@@ -19,7 +20,7 @@ const NON_ASSET_FILES = new Set(["manifest.json", "packages-lock.json"]);
  * `cvs`, `.tmp`, and the package-manager manifests. Skipping them keeps
  * missing-meta warnings meaningful.
  */
-function isIgnoredEntry(name: string): boolean {
+function isUnityIgnored(name: string): boolean {
   if (name.startsWith(".")) return true;
   if (name.endsWith("~")) return true;
   if (name.endsWith(".tmp")) return true;
@@ -27,19 +28,39 @@ function isIgnoredEntry(name: string): boolean {
   return lower === "cvs" || NON_ASSET_FILES.has(lower);
 }
 
+/** Predicate deciding whether a directory entry is skipped during the scan. */
+export type IgnorePredicate = (name: string, relPath: string) => boolean;
+
+export interface ScanIgnoreConfig {
+  ignore: string[];
+  ignoreDefaults: boolean;
+}
+
+/** Build the scan ignore predicate: built-in Unity rules + user glob patterns. */
+export function buildIgnore(config: ScanIgnoreConfig): IgnorePredicate {
+  return (name, relPath) =>
+    (config.ignoreDefaults && isUnityIgnored(name)) ||
+    matchesAnyGlob(config.ignore, name, relPath);
+}
+
+const DEFAULT_IGNORE: IgnorePredicate = (name) => isUnityIgnored(name);
+
 /**
  * Walk a Unity project and produce one asset node per asset that carries a
  * `.meta` (US-001, the meta-scanner). Emits warnings for metas without assets,
  * assets without metas, and metas without a parseable guid, rather than throwing.
  */
-export async function scanProject(projectRoot: string): Promise<ScanResult> {
+export async function scanProject(
+  projectRoot: string,
+  ignore: IgnorePredicate = DEFAULT_IGNORE,
+): Promise<ScanResult> {
   const nodes: AssetNode[] = [];
   const warnings: ScanWarning[] = [];
 
   for (const rel of SCAN_ROOTS) {
     const abs = join(projectRoot, rel);
     if (await isDirectory(abs)) {
-      await walk(projectRoot, rel, nodes, warnings);
+      await walk(projectRoot, rel, nodes, warnings, ignore);
     }
   }
 
@@ -51,13 +72,14 @@ async function walk(
   relDir: string,
   nodes: AssetNode[],
   warnings: ScanWarning[],
+  ignore: IgnorePredicate,
 ): Promise<void> {
   const entries = await readdir(join(projectRoot, relDir), { withFileTypes: true });
   const names = new Set(entries.map((e) => e.name));
 
   for (const entry of entries) {
-    if (isIgnoredEntry(entry.name)) continue;
     const relPath = `${relDir}/${entry.name}`;
+    if (ignore(entry.name, relPath)) continue;
 
     if (entry.name.endsWith(META_SUFFIX)) {
       const assetName = entry.name.slice(0, -META_SUFFIX.length);
@@ -84,7 +106,7 @@ async function walk(
     }
 
     if (entry.isDirectory()) {
-      await walk(projectRoot, relPath, nodes, warnings);
+      await walk(projectRoot, relPath, nodes, warnings, ignore);
     }
   }
 }

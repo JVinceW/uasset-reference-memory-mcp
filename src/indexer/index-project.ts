@@ -1,7 +1,8 @@
 import { copyFile, readFile, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { GraphStore } from "../store/graph-store.js";
-import { scanProject } from "./meta-scanner.js";
+import { scanProject, buildIgnore } from "./meta-scanner.js";
+import { loadConfig, configPathFor } from "../config/project-config.js";
 import { BUILTIN_NODES } from "./builtins.js";
 import { readSerializationMode } from "./project-settings.js";
 import { extractReferences, kindFor, type Resolver } from "./ref-extractor.js";
@@ -13,7 +14,7 @@ export interface IndexOptions {
   dbPath: string;
   force?: boolean;
   unityVersion?: string;
-  scan?: (projectRoot: string) => Promise<ScanResult>;
+  scan?: (projectRoot: string, ignore?: (name: string, relPath: string) => boolean) => Promise<ScanResult>;
 }
 
 export interface IndexSummary {
@@ -64,7 +65,8 @@ export async function indexProject(
     if ((await readSerializationMode(projectRoot)) === "binary") {
       throw new BinarySerializationError();
     }
-    const result = await scan(projectRoot);
+    const config = loadConfig(configPathFor(dbPath));
+    const result = await scan(projectRoot, buildIgnore(config.scan));
     // Built-in sentinel guids resolve against synthetic nodes so references to
     // them are edges, not broken refs (US-004). They are stored as infrastructure
     // but excluded from the user-facing change counts.
