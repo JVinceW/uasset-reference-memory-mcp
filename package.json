@@ -6,7 +6,8 @@
   "description": "MCP server that indexes a Unity project's assets into a reusable SQLite reference graph.",
   "bin": {
     "asset-reference-mcp": "dist/cli/main.js",
-    "asset-reference-mcp-web": "dist/web/server.js"
+    "asset-reference-mcp-web": "dist/web/server.js",
+    "asset-reference-mcp-server": "dist/mcp/server.js"
   },
   "scripts": {
     "test": "vitest run",
@@ -27,6 +28,8 @@
     "vitest": "^2.1.0"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "better-sqlite3": "^12.11.1",
+    "zod": "^4.4.3"
   }
 }
