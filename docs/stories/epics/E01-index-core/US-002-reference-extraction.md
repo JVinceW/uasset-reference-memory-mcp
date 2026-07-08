@@ -85,3 +85,15 @@ None expected.
   `--force` remains the fully-consistent rebuild.
 - References to Unity **builtin** assets and package ids stay unresolved until
   **US-004** seeds builtins / parses `package_id`.
+
+### Correction (intake #2, real-project verification)
+
+Real project `pudgy-unity` surfaced that always-binary `.asset` files
+(`LightingData.asset`, NavMesh, etc.) exist even in Force-Text projects. The
+original per-file "fail loudly on missing `%YAML`" aborted the whole index.
+Fixed: `indexProject` now reads `ProjectSettings/EditorSettings.asset`
+`m_SerializationMode` — fails loudly only when the **project** is ForceBinary(1);
+incidental binary assets are skipped with a `binary-serialized` warning and the
+index completes. New module `project-settings.ts` (`parseSerializationMode`).
+Verified end-to-end: 22,913 assets / 12,956 edges / 8,119 (genuine) unresolved
+in 7.4s.

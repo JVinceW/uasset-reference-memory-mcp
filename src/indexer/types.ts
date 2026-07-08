@@ -76,7 +76,8 @@ export type ScanWarningKind =
   | "orphan-meta"
   | "missing-meta"
   | "invalid-meta"
-  | "unreadable-asset";
+  | "unreadable-asset"
+  | "binary-serialized";
 
 export interface ScanWarning {
   kind: ScanWarningKind;

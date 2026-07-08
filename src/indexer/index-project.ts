@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { GraphStore } from "../store/graph-store.js";
 import { scanProject } from "./meta-scanner.js";
 import { BUILTIN_NODES } from "./builtins.js";
+import { readSerializationMode } from "./project-settings.js";
 import { extractReferences, kindFor, type Resolver } from "./ref-extractor.js";
 import { SCHEMA_VERSION } from "../store/schema.js";
 import type { AssetNode, AssetType, Edge, ScanResult, ScanWarning, UnresolvedRef } from "./types.js";
@@ -25,13 +26,14 @@ export interface IndexSummary {
   unchanged: number;
 }
 
-/** Thrown when an expected-text asset is binary-serialized (Force Text is off). */
+/** Thrown when the whole project is set to ForceBinary asset serialization. */
 export class BinarySerializationError extends Error {
-  constructor(public readonly path: string) {
+  constructor() {
     super(
-      `binary serialization detected at ${path}: this project uses binary asset ` +
-        `serialization. Set Edit > Project Settings > Editor > Asset Serialization ` +
-        `to "Force Text" and re-import.`,
+      `binary serialization detected: this project's EditorSettings uses ` +
+        `ForceBinary asset serialization, so references cannot be parsed from ` +
+        `text. Set Edit > Project Settings > Editor > Asset Serialization to ` +
+        `"Force Text" and re-import.`,
     );
     this.name = "BinarySerializationError";
   }
@@ -56,6 +58,11 @@ export async function indexProject(
 
   const store = GraphStore.open(tempPath);
   try {
+    // Fail loudly only when the whole project is ForceBinary. Incidental
+    // always-binary assets (LightingData, NavMesh, ...) are skipped per-file.
+    if ((await readSerializationMode(projectRoot)) === "binary") {
+      throw new BinarySerializationError();
+    }
     const result = await scan(projectRoot);
     // Built-in sentinel guids resolve against synthetic nodes so references to
     // them are edges, not broken refs (US-004). They are stored as infrastructure
@@ -184,7 +191,16 @@ async function extractAll(
     }
 
     const res = extractReferences(content, node.guid, resolve);
-    if (res.binarySerialized) throw new BinarySerializationError(node.path);
+    if (res.binarySerialized) {
+      // Incidental always-binary asset (e.g. LightingData.asset) in a text
+      // project — skip its edges rather than aborting the whole index.
+      warnings.push({
+        kind: "binary-serialized",
+        path: node.path,
+        message: `asset is binary-serialized; skipped reference extraction: ${node.path}`,
+      });
+      continue;
+    }
     edges.push(...res.edges);
     unresolved.push(...res.unresolved);
   }
