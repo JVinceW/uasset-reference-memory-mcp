@@ -26,6 +26,7 @@ const TOOLS: ToolDef[] = [
   { name: "search_assets", description: "Search assets by name/type/path/origin and reference counts.", schema: { name: z.string().optional(), type: z.string().optional(), pathPrefix: z.string().optional(), origin: z.string().optional(), minRefs: z.number().optional(), maxRefs: z.number().optional(), limit: z.number().optional() } },
   { name: "get_overview", description: "Architecture overview: counts, hubs, broken refs.", schema: {} },
   { name: "export_graph_json", description: "Write a git-diffable JSON export of the whole graph (assets/edges/unresolved/addressables).", schema: { out: z.string().optional() } },
+  { name: "manage_adr", description: "Manage Architecture Decision Records (markdown under .asset-memory/adrs/).", schema: { action: z.enum(["create", "list", "get", "update"]), id: z.number().optional(), title: z.string().optional(), status: z.string().optional(), context: z.string().optional(), decision: z.string().optional(), consequences: z.string().optional() } },
 ];
 
 /** Build an MCP server exposing the asset-graph tools over the given context. */
