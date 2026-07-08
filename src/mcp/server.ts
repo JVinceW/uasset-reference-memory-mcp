@@ -20,6 +20,7 @@ const TOOLS: ToolDef[] = [
   { name: "index_status", description: "Index location, counts, and last-indexed time.", schema: {} },
   { name: "get_dependencies", description: "Everything an asset depends on (forward).", schema: { asset, depth } },
   { name: "find_references", description: "Everything that references an asset (impact analysis).", schema: { asset, depth } },
+  { name: "get_edges", description: "Raw reference edges (ref_kind, YAML context, fileId) between/for assets.", schema: { from: z.string().optional(), to: z.string().optional(), kind: z.string().optional(), limit: z.number().optional() } },
   { name: "trace_path", description: "Shortest reference chain between two assets.", schema: { from: z.string(), to: z.string() } },
   { name: "find_unused_assets", description: "Project assets unreachable from roots (cleanup candidates).", schema: { scope: z.string().optional(), includeScripts: z.boolean().optional(), addressableRoots: z.enum(["auto", "on", "off"]).optional().describe("use Addressable entries as roots (default: project config, else auto)") } },
   { name: "search_assets", description: "Search assets by name/type/path/origin and reference counts.", schema: { name: z.string().optional(), type: z.string().optional(), pathPrefix: z.string().optional(), origin: z.string().optional(), minRefs: z.number().optional(), maxRefs: z.number().optional(), limit: z.number().optional() } },

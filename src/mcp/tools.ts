@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { GraphStore } from "../store/graph-store.js";
 import { findReferences, getDependencies, type Subgraph } from "../query/traverse.js";
+import { getEdges } from "../query/edges.js";
 import { findUnusedAssets } from "../query/unused.js";
 import { tracePath } from "../query/trace.js";
 import { getOverview, searchAssets } from "../query/search.js";
@@ -56,6 +57,21 @@ export async function runTool(ctx: ToolCtx, name: string, args: Args = {}): Prom
       return withStore(ctx, (store) =>
         subgraphSummary(findReferences(store, String(args.asset ?? ""), depthOf(args)), args.asset),
       );
+
+    case "get_edges":
+      return withStore(ctx, (store) => {
+        const edges = getEdges(store, {
+          from: args.from as string | undefined,
+          to: args.to as string | undefined,
+          kind: args.kind as string | undefined,
+          limit: args.limit as number | undefined,
+        });
+        return {
+          total: edges.length,
+          note: "each row is one reference site: ref_kind + YAML property (context) + fileId",
+          edges,
+        };
+      });
 
     case "trace_path":
       return withStore(ctx, (store) => {

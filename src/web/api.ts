@@ -1,5 +1,6 @@
 import type { QueryDb } from "../query/db.js";
 import { findReferences, getDependencies, resolveRef, type Subgraph } from "../query/traverse.js";
+import { getEdges } from "../query/edges.js";
 import { findUnusedAssets } from "../query/unused.js";
 import { tracePath, type TracedPath } from "../query/trace.js";
 import { getOverview, searchAssets } from "../query/search.js";
@@ -55,6 +56,11 @@ export function handleApi(db: QueryDb, pathname: string, params: Params): ApiRes
           : getDependencies(db, ref, depth);
       return ok(toCyElements(sub!));
     }
+
+    case "/api/edges":
+      return ok(
+        getEdges(db, { from: params.from, to: params.to, kind: params.kind, limit: intOrUndef(params.limit) }),
+      );
 
     case "/api/trace": {
       const path = tracePath(db, params.from ?? "", params.to ?? "");

@@ -14,6 +14,7 @@ Nine tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
 | Tool | Behavior |
 | --- | --- |
 | `find_references(asset, depth?)` | **Impact analysis.** Who references this asset — direct or transitive up to `depth`. `asset` accepts path, GUID, or name. Returns referrer chains with `context` (why). |
+| `get_edges(from?, to?, kind?, limit?)` | **Raw edge inspection.** The individual reference edges (each `ref_kind` + YAML `context` + `fileId` + `count`) between/for assets — the rows behind the aggregated views. |
 | `get_dependencies(asset, depth?)` | Forward: everything this asset pulls in. `depth: -1` = full closure. |
 | `find_unused_assets(scope?, roots?)` | Orphans unreachable from roots. Default roots: scenes + `Resources/` + their closures. `scope` narrows to a folder. **Project-origin only.** Sorted by `file_size` descending. |
 | `trace_path(from, to)` | Shortest reference chain between two assets. |
