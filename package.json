@@ -1,20 +1,38 @@
 {
-  "name": "asset-reference-mcp",
-  "version": "0.0.0",
-  "private": true,
+  "name": "unity-asset-reference-mcp",
+  "version": "0.1.0",
   "type": "module",
-  "description": "MCP server that indexes a Unity project's assets into a reusable SQLite reference graph.",
+  "description": "Index a Unity project's assets into a reusable SQLite reference graph — impact analysis, unused-asset detection, dependency tracing, and an MCP server + web viewer. Unity-only.",
+  "keywords": [
+    "unity",
+    "mcp",
+    "model-context-protocol",
+    "addressables",
+    "asset",
+    "dependency-graph",
+    "unused-assets",
+    "impact-analysis",
+    "gamedev"
+  ],
+  "license": "MIT",
+  "author": "ll-vince-ws",
   "bin": {
-    "asset-reference-mcp": "dist/cli/main.js",
-    "asset-reference-mcp-web": "dist/web/server.js",
-    "asset-reference-mcp-server": "dist/mcp/server.js"
+    "unity-asset-reference-mcp": "dist/mcp/server.js",
+    "unity-asset-reference-mcp-index": "dist/cli/main.js",
+    "unity-asset-reference-mcp-web": "dist/web/server.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json && node scripts/copy-public.mjs",
-    "web": "node dist/web/server.js"
+    "web": "node dist/web/server.js",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=20"

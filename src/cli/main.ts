@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { pathToFileURL } from "node:url";
 import { parseArgs } from "./parse-args.js";
 import { indexProject } from "../indexer/index-project.js";
+import { isMainModule } from "../util/is-main.js";
 
-const HELP = `asset-reference-mcp — index a Unity project's asset reference graph
+const HELP = `unity-asset-reference-mcp-index — index a Unity project's asset reference graph
 
 Usage:
-  asset-reference-mcp index [projectRoot] [options]
+  unity-asset-reference-mcp-index index [projectRoot] [options]
 
 Options:
   --force            Rebuild the index from scratch (default is incremental)
@@ -16,8 +16,8 @@ Options:
   --unity <version>  Record the Unity version in index_meta
 
 Examples:
-  asset-reference-mcp index .
-  asset-reference-mcp index /path/to/UnityProject --force
+  unity-asset-reference-mcp-index index .
+  unity-asset-reference-mcp-index index /path/to/UnityProject --force
 `;
 
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
@@ -48,7 +48,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
   return 0;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMainModule(import.meta.url)) {
   main()
     .then((code) => process.exit(code))
     .catch((err: unknown) => {

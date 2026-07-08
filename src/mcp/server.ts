@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { runTool, type ToolCtx } from "./tools.js";
+import { isMainModule } from "../util/is-main.js";
 
 const asset = z.string().describe("asset path, name, or guid");
 const depth = z.number().int().optional().describe("hops to traverse; -1 = full closure (default 1)");
@@ -56,9 +56,9 @@ function parseCtx(argv: string[]): ToolCtx {
   return { dbPath, projectRoot };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMainModule(import.meta.url)) {
   const ctx = parseCtx(process.argv.slice(2));
   const server = createMcpServer(ctx);
   await server.connect(new StdioServerTransport());
-  console.error(`asset-reference-mcp server ready (db: ${ctx.dbPath})`);
+  console.error(`unity-asset-reference-mcp server ready (db: ${ctx.dbPath})`);
 }

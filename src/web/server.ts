@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isMainModule } from "../util/is-main.js";
 import { extname } from "node:path";
 import { GraphStore } from "../store/graph-store.js";
 import { handleApi } from "./api.js";
@@ -28,7 +29,7 @@ export function parseServerArgs(argv: string[]): Args {
     if (argv[i] === "--db") dbPath = argv[++i] ?? "";
     else if (argv[i] === "--port") port = Number.parseInt(argv[++i] ?? "7777", 10);
   }
-  if (!dbPath) throw new Error("usage: asset-reference-mcp-web --db <index.db> [--port 7777]");
+  if (!dbPath) throw new Error("usage: unity-asset-reference-mcp-web --db <index.db> [--port 7777]");
   return { dbPath, port };
 }
 
@@ -76,7 +77,7 @@ async function serveStatic(pathname: string, res: import("node:http").ServerResp
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMainModule(import.meta.url)) {
   try {
     startServer(parseServerArgs(process.argv.slice(2)));
   } catch (err) {
