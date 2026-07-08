@@ -1,5 +1,8 @@
 # unity-asset-reference-mcp
 
+[![CI](https://github.com/JVinceW/uasset-reference-memory-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/JVinceW/uasset-reference-memory-mcp/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/unity-asset-reference-mcp)](https://www.npmjs.com/package/unity-asset-reference-mcp)
+
 Index a **Unity** project's assets into a reusable **SQLite reference graph**, then
 query it three ways: a **CLI**, an **MCP server** (for Claude and other agents),
 and a local **web viewer**. Unity-only.

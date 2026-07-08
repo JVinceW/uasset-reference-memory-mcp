@@ -49,3 +49,20 @@ git checkout -b feat/E10-json-snapshot
 - `npm test` green
 - `npm run typecheck` clean
 - `npm run build` succeeds
+
+## CI/CD (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`): typecheck + test + build on Node 20 & 22,
+  for pushes to `main`/`planning`/`feat/**`/`release/**` and PRs to `main`.
+- **Release** (`.github/workflows/release.yml`): on push to `release/**` (or
+  manual dispatch), runs CI then `npm publish` **if `package.json`'s version is
+  new** (skips otherwise).
+
+### Releasing
+1. Bump `version` in `package.json` (and update any changelog).
+2. Push to a `release/*` branch (e.g. `git push origin main:release/0.1.2`).
+3. The Release workflow publishes to npm.
+
+**One-time setup:** add a repo secret **`NPM_TOKEN`** — an npm **Automation**
+(granular) token with publish permission and **bypass-2FA** enabled (CI can't do
+interactive OTP). GitHub → repo Settings → Secrets and variables → Actions.
