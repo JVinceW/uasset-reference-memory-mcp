@@ -1,6 +1,7 @@
 import type { QueryDb } from "./db.js";
 import { rowToNode } from "../store/row.js";
 import { resolveRef } from "./traverse.js";
+import type { AddressableRoots } from "../config/project-config.js";
 import type { AssetNode } from "../indexer/types.js";
 
 export interface UnusedOptions {
@@ -10,6 +11,16 @@ export interface UnusedOptions {
   roots?: string[];
   /** Include Script assets (off by default: code refs aren't in the graph). */
   includeScripts?: boolean;
+  /** Treat Addressable entries as roots: 'auto' (if any present) | 'on' | 'off'. */
+  addressableRoots?: AddressableRoots;
+}
+
+/** Resolve whether Addressable entries should be used as roots for this call. */
+function useAddressables(db: QueryDb, mode: AddressableRoots): boolean {
+  if (mode === "on") return true;
+  if (mode === "off") return false;
+  const n = (db.all("SELECT COUNT(*) AS n FROM addressable_entries")[0]?.n as number) ?? 0;
+  return n > 0; // auto
 }
 
 /**
@@ -30,6 +41,10 @@ export function findUnusedAssets(db: QueryDb, opts: UnusedOptions = {}): AssetNo
     params.push(JSON.stringify(guids));
   } else {
     rootsCte = "SELECT guid FROM assets WHERE asset_type = 'Scene' OR path LIKE '%/Resources/%'";
+  }
+
+  if (useAddressables(db, opts.addressableRoots ?? "auto")) {
+    rootsCte = `${rootsCte} UNION SELECT guid FROM addressable_entries`;
   }
 
   const excludedTypes = opts.includeScripts ? ["Folder"] : ["Folder", "Script"];

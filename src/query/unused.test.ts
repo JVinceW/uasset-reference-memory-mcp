@@ -84,4 +84,23 @@ describe("findUnusedAssets", () => {
     expect(set.has("Code.cs")).toBe(true);
     store.close();
   });
+
+  test("addressableRoots treats addressable entries as roots", () => {
+    const store = buildStore();
+    store.insertAddressableEntries([{ guid: g("u"), address: "U" }]); // mark U.png addressable
+
+    // off: U.png is still unused (addressables ignored)
+    expect(new Set(names(findUnusedAssets(store, { addressableRoots: "off" }))).has("U.png")).toBe(true);
+    // on: U.png is now a root -> not unused
+    expect(new Set(names(findUnusedAssets(store, { addressableRoots: "on" }))).has("U.png")).toBe(false);
+    // auto: entries present -> applied
+    expect(new Set(names(findUnusedAssets(store, { addressableRoots: "auto" }))).has("U.png")).toBe(false);
+    store.close();
+  });
+
+  test("auto with no addressable entries leaves detection unchanged", () => {
+    const store = buildStore(); // no addressable_entries inserted
+    expect(new Set(names(findUnusedAssets(store, { addressableRoots: "auto" }))).has("O.png")).toBe(true);
+    store.close();
+  });
 });

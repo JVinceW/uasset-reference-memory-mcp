@@ -61,7 +61,7 @@ describe("runTool", () => {
   test("find_unused_assets flags orphans with the Addressables caveat", async () => {
     const r = (await runTool(ctx, "find_unused_assets")) as { total: number; note: string };
     expect(r.total).toBe(1); // Orphan.png (Scene is a root; P/M reachable)
-    expect(r.note).toMatch(/Addressables/);
+    expect(r.note).toMatch(/Addressable/);
   });
 
   test("trace_path returns the chain", async () => {

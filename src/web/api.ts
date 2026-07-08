@@ -66,6 +66,7 @@ export function handleApi(db: QueryDb, pathname: string, params: Params): ApiRes
         findUnusedAssets(db, {
           scope: params.scope,
           includeScripts: params.includeScripts === "true",
+          addressableRoots: params.addressableRoots as "auto" | "on" | "off" | undefined,
         }),
       );
 

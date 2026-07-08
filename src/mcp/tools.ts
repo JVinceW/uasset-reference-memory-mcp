@@ -5,6 +5,7 @@ import { findUnusedAssets } from "../query/unused.js";
 import { tracePath } from "../query/trace.js";
 import { getOverview, searchAssets } from "../query/search.js";
 import { indexProject as defaultIndexProject } from "../indexer/index-project.js";
+import { loadConfig, configPathFor, type AddressableRoots } from "../config/project-config.js";
 import type { AssetType, Origin } from "../indexer/types.js";
 
 export interface ToolCtx {
@@ -61,14 +62,22 @@ export async function runTool(ctx: ToolCtx, name: string, args: Args = {}): Prom
 
     case "find_unused_assets":
       return withStore(ctx, (store) => {
+        const mode: AddressableRoots =
+          (args.addressableRoots as AddressableRoots | undefined) ??
+          loadConfig(configPathFor(ctx.dbPath)).unused.addressableRoots;
         const unused = findUnusedAssets(store, {
           scope: args.scope as string | undefined,
           includeScripts: args.includeScripts === true,
+          addressableRoots: mode,
         });
         return {
           total: unused.length,
           totalBytes: unused.reduce((s, n) => s + (n.fileSize ?? 0), 0),
-          note: "candidates only — Addressables / code refs are not yet counted as roots",
+          addressableRoots: mode,
+          note:
+            mode === "off"
+              ? "Addressable entries NOT counted as roots — expect over-reporting if the project uses Addressables"
+              : "Addressable entries counted as roots (code-based Resources.Load refs still not tracked)",
           assets: unused.slice(0, LIST_LIMIT).map((n) => ({
             path: n.path,
             type: n.assetType,
