@@ -32,11 +32,20 @@ npx unity-asset-reference-mcp-index index /path/to/UnityProject
 
 ## 1. Index a project
 
-Builds `<project>/.asset-memory/index.db`. Add `.asset-memory/` to your Unity
-project's `.gitignore`.
+Builds `<project>/.asset-memory/index.db`.
 
 ```bash
 unity-asset-reference-mcp-index index /path/to/UnityProject --force
+```
+
+Add this to your **Unity project's** `.gitignore` — ignore the live index, but
+commit the config and (optional) shared snapshot:
+
+```gitignore
+# unity-asset-reference-mcp: ignore the live index, keep config + shared snapshot
+.asset-memory/index.db
+.asset-memory/index.db-*
+.asset-memory/*.building-*
 ```
 
 ## 2. MCP server (works with any MCP client)
@@ -90,6 +99,34 @@ unity-asset-reference-mcp-web --db /path/to/UnityProject/.asset-memory/index.db
 There is also a **static** flavor: open `dist/web/public/viewer.html` in a
 browser and pick a `.db` — it runs the same queries entirely in-browser (WASM
 SQLite), no server. Both share one query layer.
+
+## Team sharing (snapshots)
+
+Instead of every teammate re-indexing from scratch, commit a **compressed
+snapshot** and let them restore it — the same idea as `codebase-memory`'s
+`.codebase-memory/`.
+
+```bash
+# after indexing, export a shareable snapshot (or pass --snapshot to `index`)
+unity-asset-reference-mcp-index snapshot /path/to/UnityProject
+# -> .asset-memory/index.db.br  (brotli, ~85% smaller) + artifact.json + .gitattributes
+
+# a teammate who clones + pulls restores the live index with no re-index:
+unity-asset-reference-mcp-index restore /path/to/UnityProject
+```
+
+The MCP server and web viewer **auto-restore** from a snapshot on first use if the
+live index is missing, so a fresh clone "just works". **Commit** these:
+
+```
+.asset-memory/config.json       # per-project settings (below)
+.asset-memory/index.db.br       # compressed shared index
+.asset-memory/artifact.json     # snapshot metadata (schema, commit, counts)
+.asset-memory/.gitattributes    # marks the blob binary + merge=ours
+```
+
+`artifact.json` records the git commit and counts the snapshot was built at, so
+you can tell when it's stale and re-run `index --snapshot`.
 
 ## Configuration
 

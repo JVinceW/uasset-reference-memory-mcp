@@ -5,6 +5,7 @@ import { findUnusedAssets } from "../query/unused.js";
 import { tracePath } from "../query/trace.js";
 import { getOverview, searchAssets } from "../query/search.js";
 import { indexProject as defaultIndexProject } from "../indexer/index-project.js";
+import { ensureLiveIndex } from "../snapshot/snapshot.js";
 import { loadConfig, configPathFor, type AddressableRoots } from "../config/project-config.js";
 import type { AssetType, Origin } from "../indexer/types.js";
 
@@ -23,6 +24,9 @@ const LIST_LIMIT = 200;
 
 /** Dispatch an MCP tool call to the shared query layer; returns JSON-able data. */
 export async function runTool(ctx: ToolCtx, name: string, args: Args = {}): Promise<unknown> {
+  // Restore the live index from a committed snapshot on first use (fresh clone).
+  if (name !== "index_project") await ensureLiveIndex(ctx.dbPath);
+
   switch (name) {
     case "index_project": {
       const root = (args.path as string) ?? ctx.projectRoot;

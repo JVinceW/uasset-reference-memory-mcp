@@ -28,4 +28,18 @@ describe("parseArgs", () => {
     expect(parseArgs([]).command).toBe("help");
     expect(parseArgs(["wat"]).command).toBe("help");
   });
+
+  test("parses the snapshot and restore commands like index", () => {
+    const snap = parseArgs(["snapshot", "/proj"]);
+    expect(snap.command).toBe("snapshot");
+    expect(snap.dbPath).toBe("/proj/.asset-memory/index.db");
+
+    const restore = parseArgs(["restore", "/proj"]);
+    expect(restore.command).toBe("restore");
+  });
+
+  test("index --snapshot sets the snapshot flag", () => {
+    expect(parseArgs(["index", "/proj", "--snapshot"]).snapshot).toBe(true);
+    expect(parseArgs(["index", "/proj"]).snapshot).toBe(false);
+  });
 });

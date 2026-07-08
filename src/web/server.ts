@@ -6,6 +6,7 @@ import { isMainModule } from "../util/is-main.js";
 import { extname } from "node:path";
 import { GraphStore } from "../store/graph-store.js";
 import { handleApi } from "./api.js";
+import { ensureLiveIndex } from "../snapshot/snapshot.js";
 
 const PUBLIC_DIR = new URL("./public/", import.meta.url);
 
@@ -78,10 +79,12 @@ async function serveStatic(pathname: string, res: import("node:http").ServerResp
 }
 
 if (isMainModule(import.meta.url)) {
-  try {
-    startServer(parseServerArgs(process.argv.slice(2)));
-  } catch (err) {
+  (async () => {
+    const args = parseServerArgs(process.argv.slice(2));
+    await ensureLiveIndex(args.dbPath); // restore from snapshot if the live index is absent
+    startServer(args);
+  })().catch((err: unknown) => {
     console.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
-  }
+  });
 }
