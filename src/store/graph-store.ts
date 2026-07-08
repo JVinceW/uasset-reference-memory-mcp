@@ -95,6 +95,18 @@ export class GraphStore {
     return (this.db.prepare("SELECT COUNT(*) AS n FROM assets").get() as { n: number }).n;
   }
 
+  getNodeByPath(path: string): AssetNode | null {
+    const row = this.db.prepare("SELECT * FROM assets WHERE path = ?").get(path) as
+      | AssetRow
+      | undefined;
+    return row ? GraphStore.rowToNode(row) : null;
+  }
+
+  getNodesByName(name: string): AssetNode[] {
+    const rows = this.db.prepare("SELECT * FROM assets WHERE name = ?").all(name) as AssetRow[];
+    return rows.map(GraphStore.rowToNode);
+  }
+
   /** Map of project-relative path -> {guid, mtime}, for incremental indexing. */
   getNodeMtimes(): Map<string, { guid: string; mtime: number }> {
     const rows = this.db.prepare("SELECT path, guid, mtime FROM assets").all() as {
@@ -142,6 +154,23 @@ export class GraphStore {
 
   edgeCount(): number {
     return (this.db.prepare("SELECT COUNT(*) AS n FROM edges").get() as { n: number }).n;
+  }
+
+  private static readonly EDGE_COLS =
+    "from_guid AS fromGuid, to_guid AS toGuid, ref_kind AS refKind, file_id AS fileId, context, count";
+
+  /** Edges originating from `guid` (its outgoing dependencies). */
+  outgoingEdges(guid: string): Edge[] {
+    return this.db
+      .prepare(`SELECT ${GraphStore.EDGE_COLS} FROM edges WHERE from_guid = ?`)
+      .all(guid) as Edge[];
+  }
+
+  /** Edges pointing at `guid` (its dependents). */
+  incomingEdges(guid: string): Edge[] {
+    return this.db
+      .prepare(`SELECT ${GraphStore.EDGE_COLS} FROM edges WHERE to_guid = ?`)
+      .all(guid) as Edge[];
   }
 
   /** Remove all edges and unresolved refs originating from the given guids. */

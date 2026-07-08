@@ -2,7 +2,7 @@
 
 ## Status
 
-planned
+implemented
 
 ## Lane
 
@@ -65,4 +65,20 @@ Establishes `src/query/` as the shared layer reused by viewer and MCP server.
 
 ## Evidence
 
-Add after implementation.
+- `npm test` — 100 tests pass. New: `query/traverse` (resolveRef precedence +
+  ambiguous/not-found; forward/backward BFS with depth bounds + cycle safety).
+- `npm run typecheck` clean.
+- New store read helpers: `getNodeByPath`, `getNodesByName`, `outgoingEdges`,
+  `incomingEdges`.
+- **Real-data spot-check** on `pudgy-index.db`:
+  `get_dependencies(P_BurningNFTView.prefab, depth=2)` → 131 nodes / 197 edges
+  across Prefab/Script/Texture/Material/Shader/Anim/etc.;
+  `find_references(<shared texture>, full)` → 43 dependents. Confirms bounded,
+  correct traversal without loading the whole graph.
+
+### Notes
+
+- `src/query/traverse.ts` is the shared layer for E04 viewer + E02b MCP server.
+- Returns `{ root, nodes: (AssetNode & {distance})[], edges }` — ready for both a
+  list view and graph rendering.
+- Depth semantics: `0` = root only, `N` = N hops, `-1` = full closure.
