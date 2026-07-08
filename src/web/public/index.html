@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Asset Reference Graph</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Asset Reference Graph</h1>
+      <form id="search" autocomplete="off">
+        <input id="ref" type="text" placeholder="asset path, name, or guid — e.g. Assets/…/Player.prefab" />
+        <select id="dir" title="direction">
+          <option value="deps">dependencies →</option>
+          <option value="refs">← references</option>
+        </select>
+        <label>depth <input id="depth" type="number" min="0" max="8" value="1" /></label>
+        <button type="submit">Show</button>
+      </form>
+      <div id="stats" class="stats"></div>
+    </header>
+    <main>
+      <div id="cy"></div>
+      <aside id="panel" class="panel hidden">
+        <button id="panel-close" title="close">✕</button>
+        <div id="panel-body"></div>
+      </aside>
+    </main>
+    <div id="hint">Search an asset, then <b>click a node</b> to expand its neighbors.</div>
+    <script src="vendor/cytoscape.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -29,3 +29,5 @@ scripts/bin/harness-cli.exe
 !.harness/changesets/
 !.harness/changesets/*.changeset.jsonl
 dist/
+spotcheck.mjs
+spot-*.mjs
