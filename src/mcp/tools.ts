@@ -3,6 +3,7 @@ import { GraphStore } from "../store/graph-store.js";
 import { findReferences, getDependencies, type Subgraph } from "../query/traverse.js";
 import { getEdges } from "../query/edges.js";
 import { writeGraphJson } from "../snapshot/json-export.js";
+import { createAdr, listAdrs, getAdr, updateAdr } from "../adr/adr.js";
 import { findUnusedAssets } from "../query/unused.js";
 import { dirname, join } from "node:path";
 import { tracePath } from "../query/trace.js";
@@ -138,6 +139,31 @@ export async function runTool(ctx: ToolCtx, name: string, args: Args = {}): Prom
         const g = await writeGraphJson(store, out);
         return { path: out, ...g.meta };
       });
+
+    case "manage_adr": {
+      const adrDir = join(dirname(ctx.dbPath), "adrs");
+      const action = String(args.action ?? "");
+      const fields = {
+        title: args.title as string,
+        status: args.status as string | undefined,
+        context: args.context as string | undefined,
+        decision: args.decision as string | undefined,
+        consequences: args.consequences as string | undefined,
+      };
+      switch (action) {
+        case "create":
+          if (!fields.title) return { error: "missing-title" };
+          return createAdr(adrDir, fields);
+        case "list":
+          return { adrs: await listAdrs(adrDir) };
+        case "get":
+          return (await getAdr(adrDir, Number(args.id))) ?? { error: "not-found", id: args.id };
+        case "update":
+          return (await updateAdr(adrDir, Number(args.id), fields)) ?? { error: "not-found", id: args.id };
+        default:
+          return { error: "unknown-action", action, valid: ["create", "list", "get", "update"] };
+      }
+    }
 
     default:
       return { error: "unknown-tool", name };
