@@ -1,4 +1,4 @@
-import type { GraphStore } from "../store/graph-store.js";
+import type { QueryDb } from "../query/db.js";
 import { findReferences, getDependencies, resolveRef, type Subgraph } from "../query/traverse.js";
 import { findUnusedAssets } from "../query/unused.js";
 import { tracePath, type TracedPath } from "../query/trace.js";
@@ -17,14 +17,14 @@ type Params = Record<string, string | undefined>;
  * the shared query layer; returns a status and JSON-serializable body so it can
  * be tested without a live HTTP server.
  */
-export function handleApi(store: GraphStore, pathname: string, params: Params): ApiResponse {
+export function handleApi(db: QueryDb, pathname: string, params: Params): ApiResponse {
   switch (pathname) {
     case "/api/overview":
-      return ok(getOverview(store));
+      return ok(getOverview(db));
 
     case "/api/search":
       return ok(
-        searchAssets(store, {
+        searchAssets(db, {
           name: params.name,
           type: params.type as AssetType | undefined,
           pathPrefix: params.pathPrefix,
@@ -36,7 +36,7 @@ export function handleApi(store: GraphStore, pathname: string, params: Params): 
       );
 
     case "/api/resolve": {
-      const r = resolveRef(store, params.ref ?? "");
+      const r = resolveRef(db, params.ref ?? "");
       return r.node
         ? ok(r.node)
         : { status: 404, body: { error: r.reason, candidates: r.candidates ?? [] } };
@@ -44,26 +44,26 @@ export function handleApi(store: GraphStore, pathname: string, params: Params): 
 
     case "/api/neighborhood": {
       const ref = params.ref ?? "";
-      const resolved = resolveRef(store, ref);
+      const resolved = resolveRef(db, ref);
       if (!resolved.node) {
         return { status: 404, body: { error: resolved.reason, candidates: resolved.candidates ?? [] } };
       }
       const depth = intOrUndef(params.depth) ?? 1;
       const sub =
         params.dir === "refs"
-          ? findReferences(store, ref, depth)
-          : getDependencies(store, ref, depth);
+          ? findReferences(db, ref, depth)
+          : getDependencies(db, ref, depth);
       return ok(toCyElements(sub!));
     }
 
     case "/api/trace": {
-      const path = tracePath(store, params.from ?? "", params.to ?? "");
+      const path = tracePath(db, params.from ?? "", params.to ?? "");
       return path ? ok(pathToCyElements(path)) : { status: 404, body: { error: "no-path" } };
     }
 
     case "/api/unused":
       return ok(
-        findUnusedAssets(store, {
+        findUnusedAssets(db, {
           scope: params.scope,
           includeScripts: params.includeScripts === "true",
         }),

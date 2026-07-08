@@ -1,4 +1,5 @@
-import { GraphStore, type AssetRow } from "../store/graph-store.js";
+import type { QueryDb } from "./db.js";
+import { rowToNode } from "../store/row.js";
 import type { AssetNode, AssetType, Origin } from "../indexer/types.js";
 
 export interface SearchFilters {
@@ -13,7 +14,7 @@ export interface SearchFilters {
 }
 
 /** Structured node search with inbound reference-count filters (US-008). */
-export function searchAssets(store: GraphStore, filters: SearchFilters = {}): AssetNode[] {
+export function searchAssets(db: QueryDb, filters: SearchFilters = {}): AssetNode[] {
   const where: string[] = [];
   const params: unknown[] = [];
   const inbound = "(SELECT COUNT(*) FROM edges WHERE to_guid = a.guid)";
@@ -45,10 +46,9 @@ export function searchAssets(store: GraphStore, filters: SearchFilters = {}): As
 
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
   const limit = filters.limit ?? 500;
-  const rows = store.db
-    .prepare(`SELECT a.* FROM assets a ${clause} ORDER BY a.path LIMIT ?`)
-    .all(...params, limit) as AssetRow[];
-  return rows.map(GraphStore.rowToNode);
+  return db
+    .all(`SELECT a.* FROM assets a ${clause} ORDER BY a.path LIMIT ?`, [...params, limit])
+    .map(rowToNode);
 }
 
 export interface Overview {
@@ -64,32 +64,27 @@ export interface Overview {
 }
 
 /** Architecture overview: counts, hubs, and broken-ref summary (US-008). */
-export function getOverview(store: GraphStore): Overview {
+export function getOverview(db: QueryDb): Overview {
+  const scalar = (sql: string): number => (db.all(sql)[0]?.n as number) ?? 0;
   const countMap = (sql: string): Record<string, number> => {
     const out: Record<string, number> = {};
-    for (const r of store.db.prepare(sql).all() as { k: string; c: number }[]) out[r.k] = r.c;
+    for (const r of db.all(sql)) out[r.k as string] = r.c as number;
     return out;
   };
 
-  const topReferenced = store.db
-    .prepare(
-      `SELECT a.path, a.name, COUNT(e.from_guid) AS refCount
-       FROM assets a JOIN edges e ON e.to_guid = a.guid
-       GROUP BY a.guid ORDER BY refCount DESC, a.path LIMIT 20`,
-    )
-    .all() as { path: string; name: string; refCount: number }[];
+  const topReferenced = db.all(
+    `SELECT a.path, a.name, COUNT(e.from_guid) AS refCount
+     FROM assets a JOIN edges e ON e.to_guid = a.guid
+     GROUP BY a.guid ORDER BY refCount DESC, a.path LIMIT 20`,
+  ) as unknown as { path: string; name: string; refCount: number }[];
 
   return {
-    totalAssets: store.assetCount(),
+    totalAssets: scalar("SELECT COUNT(*) AS n FROM assets"),
     byType: countMap("SELECT asset_type AS k, COUNT(*) AS c FROM assets GROUP BY asset_type"),
     byOrigin: countMap("SELECT origin AS k, COUNT(*) AS c FROM assets GROUP BY origin"),
-    edgeCount: store.edgeCount(),
-    unresolvedCount: store.unresolvedCount(),
-    brokenRefGuids: (
-      store.db.prepare("SELECT COUNT(DISTINCT to_guid) AS n FROM unresolved_refs").get() as {
-        n: number;
-      }
-    ).n,
+    edgeCount: scalar("SELECT COUNT(*) AS n FROM edges"),
+    unresolvedCount: scalar("SELECT COUNT(*) AS n FROM unresolved_refs"),
+    brokenRefGuids: scalar("SELECT COUNT(DISTINCT to_guid) AS n FROM unresolved_refs"),
     topReferenced,
   };
 }

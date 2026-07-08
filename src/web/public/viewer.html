@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Asset Reference Graph (static)</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Asset Reference Graph <small style="color:#6d7688">· static</small></h1>
+      <form id="search" autocomplete="off">
+        <input id="ref" type="text" placeholder="load an index.db first…" />
+        <select id="dir" title="direction">
+          <option value="deps">dependencies →</option>
+          <option value="refs">← references</option>
+        </select>
+        <label>depth <input id="depth" type="number" min="0" max="8" value="1" /></label>
+        <button type="submit">Show</button>
+        <label class="file">open .db <input id="dbfile" type="file" accept=".db,.sqlite" /></label>
+      </form>
+      <div id="stats" class="stats">pick an <b>index.db</b> to begin (no server needed)</div>
+    </header>
+    <main>
+      <div id="cy"></div>
+      <aside id="panel" class="panel hidden">
+        <button id="panel-close" title="close">✕</button>
+        <div id="panel-body"></div>
+      </aside>
+    </main>
+    <div id="hint">Load an <b>index.db</b>, search an asset, then <b>click a node</b> to expand.</div>
+
+    <script>window.__DEFERRED_BOOT = true;</script>
+    <script src="vendor/cytoscape.min.js"></script>
+    <script src="vendor/sql-wasm.js"></script>
+    <script src="app.js"></script>
+    <script type="module" src="wasm-app.js"></script>
+  </body>
+</html>

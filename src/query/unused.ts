@@ -1,4 +1,5 @@
-import { GraphStore, type AssetRow } from "../store/graph-store.js";
+import type { QueryDb } from "./db.js";
+import { rowToNode } from "../store/row.js";
 import { resolveRef } from "./traverse.js";
 import type { AssetNode } from "../indexer/types.js";
 
@@ -17,13 +18,13 @@ export interface UnusedOptions {
  * Folders (and Scripts, unless `includeScripts`) are excluded to avoid noise.
  * Sorted by file size descending — biggest cleanup wins first.
  */
-export function findUnusedAssets(store: GraphStore, opts: UnusedOptions = {}): AssetNode[] {
+export function findUnusedAssets(db: QueryDb, opts: UnusedOptions = {}): AssetNode[] {
   const params: unknown[] = [];
 
   let rootsCte: string;
   if (opts.roots) {
     const guids = opts.roots
-      .map((r) => resolveRef(store, r).node?.guid)
+      .map((r) => resolveRef(db, r).node?.guid)
       .filter((g): g is string => Boolean(g));
     rootsCte = "SELECT value AS guid FROM json_each(?)";
     params.push(JSON.stringify(guids));
@@ -56,6 +57,5 @@ export function findUnusedAssets(store: GraphStore, opts: UnusedOptions = {}): A
       ${scopeClause}
     ORDER BY (a.file_size IS NULL), a.file_size DESC, a.path`;
 
-  const rows = store.db.prepare(sql).all(...params) as AssetRow[];
-  return rows.map(GraphStore.rowToNode);
+  return db.all(sql, params).map(rowToNode);
 }

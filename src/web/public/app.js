@@ -43,8 +43,12 @@ const $ = (id) => document.getElementById(id);
 const statsEl = $("stats");
 
 async function api(path, params) {
+  const clean = {};
+  for (const [k, v] of Object.entries(params || {})) if (v != null && v !== "") clean[k] = String(v);
+  // Static (WASM) flavor sets window.__PROVIDER to run queries in-browser.
+  if (window.__PROVIDER) return window.__PROVIDER(path, clean);
   const url = new URL(path, location.origin);
-  for (const [k, v] of Object.entries(params || {})) if (v != null && v !== "") url.searchParams.set(k, v);
+  for (const [k, v] of Object.entries(clean)) url.searchParams.set(k, v);
   const res = await fetch(url);
   const body = await res.json();
   if (!res.ok) throw Object.assign(new Error(body.error || res.statusText), { body });
@@ -143,9 +147,10 @@ $("search").addEventListener("submit", (e) => {
   if (ref) show(ref);
 });
 
-// Load overview on start, then auto-render either the ?ref= URL param or a
-// sensible default asset so the canvas is never empty.
-(async () => {
+// Load overview, then auto-render either the ?ref= URL param or a sensible
+// default asset so the canvas is never empty. The static (WASM) flavor defers
+// this until a database file has been loaded (window.__DEFERRED_BOOT).
+async function boot() {
   try {
     const o = await api("/api/overview", {});
     statsEl.textContent = `${o.totalAssets} assets · ${o.edgeCount} edges · ${o.unresolvedCount} unresolved`;
@@ -164,4 +169,7 @@ $("search").addEventListener("submit", (e) => {
       await show(ref);
     }
   } catch (err) { statsEl.innerHTML = `<span class="err">${err.message}</span>`; }
-})();
+}
+
+window.__bootViewer = boot;
+if (!window.__DEFERRED_BOOT) boot();

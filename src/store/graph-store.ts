@@ -1,28 +1,25 @@
 import Database from "better-sqlite3";
 import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema.js";
-import type { AssetNode, AssetType, Edge, Origin, UnresolvedRef } from "../indexer/types.js";
+import { rowToNode, type AssetRow } from "./row.js";
+import type { QueryDb } from "../query/db.js";
+import type { AssetNode, Edge, UnresolvedRef } from "../indexer/types.js";
 
-export interface AssetRow {
-  guid: string;
-  path: string;
-  name: string;
-  asset_type: string;
-  origin: string;
-  package_id: string | null;
-  file_size: number | null;
-  mtime: number;
-  is_binary: number;
-}
+export type { AssetRow } from "./row.js";
 
 /**
  * Thin wrapper over the SQLite index store. All better-sqlite3 usage is confined
  * here so a future `node:sqlite` swap (see decision 0008) touches one file.
  */
-export class GraphStore {
+export class GraphStore implements QueryDb {
   readonly db: Database.Database;
 
   private constructor(db: Database.Database) {
     this.db = db;
+  }
+
+  /** QueryDb: run a read query and return object rows (shared with the WASM store). */
+  all(sql: string, params: unknown[] = []): Record<string, unknown>[] {
+    return this.db.prepare(sql).all(...params) as Record<string, unknown>[];
   }
 
   /** Open (or create) the store at `path` and ensure the schema exists. */
@@ -88,7 +85,7 @@ export class GraphStore {
     const row = this.db.prepare("SELECT * FROM assets WHERE guid = ?").get(guid) as
       | AssetRow
       | undefined;
-    return row ? GraphStore.rowToNode(row) : null;
+    return row ? rowToNode(row) : null;
   }
 
   assetCount(): number {
@@ -99,12 +96,12 @@ export class GraphStore {
     const row = this.db.prepare("SELECT * FROM assets WHERE path = ?").get(path) as
       | AssetRow
       | undefined;
-    return row ? GraphStore.rowToNode(row) : null;
+    return row ? rowToNode(row) : null;
   }
 
   getNodesByName(name: string): AssetNode[] {
     const rows = this.db.prepare("SELECT * FROM assets WHERE name = ?").all(name) as AssetRow[];
-    return rows.map(GraphStore.rowToNode);
+    return rows.map(rowToNode);
   }
 
   /** Map of project-relative path -> {guid, mtime}, for incremental indexing. */
@@ -234,17 +231,4 @@ export class GraphStore {
       .n;
   }
 
-  static rowToNode(row: AssetRow): AssetNode {
-    return {
-      guid: row.guid,
-      path: row.path,
-      name: row.name,
-      assetType: row.asset_type as AssetType,
-      origin: row.origin as Origin,
-      packageId: row.package_id,
-      fileSize: row.file_size,
-      mtime: row.mtime,
-      isBinary: row.is_binary === 1,
-    };
-  }
 }
