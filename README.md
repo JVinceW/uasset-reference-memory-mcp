@@ -39,14 +39,45 @@ project's `.gitignore`.
 unity-asset-reference-mcp-index index /path/to/UnityProject --force
 ```
 
-## 2. MCP server (Claude Code & other agents)
+## 2. MCP server (works with any MCP client)
 
-```bash
-claude mcp add asset-graph -- npx -y unity-asset-reference-mcp --project /path/to/UnityProject
+This is a standard **stdio MCP server** — it works with any MCP-compatible host:
+Claude Code/Desktop, Cursor, Windsurf, Cline, VS Code (Copilot agent), Zed, and
+others. Nothing is Claude-specific; only where you put the config differs.
+
+**Generic config** (Claude Desktop, Cursor, Windsurf, Cline, and most hosts use
+this `mcpServers` shape):
+
+```json
+{
+  "mcpServers": {
+    "unity-asset-graph": {
+      "command": "npx",
+      "args": ["-y", "unity-asset-reference-mcp", "--project", "/path/to/UnityProject"]
+    }
+  }
+}
 ```
 
-Tools: `index_project`, `index_status`, `get_dependencies`, `find_references`,
-`find_unused_assets`, `trace_path`, `search_assets`, `get_overview`.
+Where that config lives, per host:
+
+| Host | Config location |
+| --- | --- |
+| Claude Code | `claude mcp add unity-asset-graph -- npx -y unity-asset-reference-mcp --project /path/to/UnityProject` (or `.mcp.json` in the project) |
+| Claude Desktop | `claude_desktop_config.json` |
+| Cursor | `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global) |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` |
+| Cline | `cline_mcp_settings.json` |
+| VS Code (Copilot) | `.vscode/mcp.json` — uses the key `servers` instead of `mcpServers` |
+
+**Prerequisites:** Node ≥ 20 on `PATH` (for `npx`), and a Unity project on Force
+Text serialization. You do **not** need to pre-index — call the `index_project`
+tool once from the agent and it builds `<project>/.asset-memory/index.db`; the
+read tools return a clear `no-index` error until you do.
+
+**Tools exposed:** `index_project`, `index_status`, `get_dependencies`,
+`find_references`, `find_unused_assets`, `trace_path`, `search_assets`,
+`get_overview`.
 
 ## 3. Web viewer
 
