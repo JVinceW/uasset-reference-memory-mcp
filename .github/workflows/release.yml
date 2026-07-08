@@ -1,0 +1,42 @@
+name: Release
+
+# Publishes to npm when the version in package.json is new. Push to a release/*
+# branch (after bumping the version) or trigger manually.
+#
+# Requires a repo secret NPM_TOKEN — an npm *Automation* (granular) token with
+# publish permission and "bypass 2FA" enabled (CI cannot do interactive OTP).
+
+on:
+  push:
+    branches: ["release/**"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Publish if version is new
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VERSION already on npm — skipping publish."
+          else
+            echo "Publishing $NAME@$VERSION"
+            npm publish --access public --provenance
+          fi
