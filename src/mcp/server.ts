@@ -25,6 +25,7 @@ const TOOLS: ToolDef[] = [
   { name: "find_unused_assets", description: "Project assets unreachable from roots (cleanup candidates).", schema: { scope: z.string().optional(), includeScripts: z.boolean().optional(), addressableRoots: z.enum(["auto", "on", "off"]).optional().describe("use Addressable entries as roots (default: project config, else auto)") } },
   { name: "search_assets", description: "Search assets by name/type/path/origin and reference counts.", schema: { name: z.string().optional(), type: z.string().optional(), pathPrefix: z.string().optional(), origin: z.string().optional(), minRefs: z.number().optional(), maxRefs: z.number().optional(), limit: z.number().optional() } },
   { name: "get_overview", description: "Architecture overview: counts, hubs, broken refs.", schema: {} },
+  { name: "export_graph_json", description: "Write a git-diffable JSON export of the whole graph (assets/edges/unresolved/addressables).", schema: { out: z.string().optional() } },
 ];
 
 /** Build an MCP server exposing the asset-graph tools over the given context. */

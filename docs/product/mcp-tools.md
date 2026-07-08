@@ -25,6 +25,7 @@ Nine tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
 | --- | --- |
 | `search_assets(name?, type?, path_prefix?, origin?, min_refs?, max_refs?)` | Structured node search with inbound/outbound ref-count filters. |
 | `get_overview()` | Counts by type/origin, top dependency hubs (most-referenced), broken-ref summary, per-package usage, biggest folders. |
+| `export_graph_json(out?)` | Write a git-diffable JSON export of the whole graph (assets/edges/unresolved/addressables), stable-ordered. Returns the path + counts. |
 
 ## Verification
 

@@ -7,6 +7,8 @@ import { dirname } from "node:path";
 import { parseArgs } from "./parse-args.js";
 import { indexProject } from "../indexer/index-project.js";
 import { exportSnapshot, importSnapshot } from "../snapshot/snapshot.js";
+import { writeGraphJson } from "../snapshot/json-export.js";
+import { GraphStore } from "../store/graph-store.js";
 import { isMainModule } from "../util/is-main.js";
 
 const VERSION: string | null = (() => {
@@ -21,8 +23,9 @@ const HELP = `unity-asset-reference-mcp-index — Unity asset reference graph CL
 
 Usage:
   unity-asset-reference-mcp-index index    [projectRoot] [--force] [--snapshot] [--db <path>] [--unity <ver>]
-  unity-asset-reference-mcp-index snapshot [projectRoot] [--db <path>]   # export a shareable snapshot
-  unity-asset-reference-mcp-index restore  [projectRoot] [--db <path>]   # rebuild the live index from a snapshot
+  unity-asset-reference-mcp-index snapshot    [projectRoot] [--db <path>]              # export a shareable snapshot
+  unity-asset-reference-mcp-index restore     [projectRoot] [--db <path>]              # rebuild the live index from a snapshot
+  unity-asset-reference-mcp-index export-json [projectRoot] [--db <path>] [--out <p>]  # write a git-diffable graph.json
 
 Snapshots (index.db.br + artifact.json) are compressed and meant to be committed;
 the live index.db is meant to be gitignored. See the README for the .gitignore split.`;
@@ -55,6 +58,23 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     }
     await importSnapshot(args.dbPath);
     console.log(`Restored live index from snapshot -> ${args.dbPath}`);
+    return 0;
+  }
+
+  if (args.command === "export-json") {
+    if (!existsSync(args.dbPath)) {
+      console.error(`no index at ${args.dbPath} — run 'index' first`);
+      return 1;
+    }
+    const out = args.out ?? `${dirname(args.dbPath)}/graph.json`;
+    const store = GraphStore.open(args.dbPath);
+    try {
+      const g = await writeGraphJson(store, out);
+      console.log(`Wrote ${out}`);
+      console.log(`  ${g.assets.length} assets, ${g.edges.length} edges, ${g.unresolved.length} unresolved, ${g.addressables.length} addressable`);
+    } finally {
+      store.close();
+    }
     return 0;
   }
 

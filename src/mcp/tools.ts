@@ -2,7 +2,9 @@ import { existsSync } from "node:fs";
 import { GraphStore } from "../store/graph-store.js";
 import { findReferences, getDependencies, type Subgraph } from "../query/traverse.js";
 import { getEdges } from "../query/edges.js";
+import { writeGraphJson } from "../snapshot/json-export.js";
 import { findUnusedAssets } from "../query/unused.js";
+import { dirname, join } from "node:path";
 import { tracePath } from "../query/trace.js";
 import { getOverview, searchAssets } from "../query/search.js";
 import { indexProject as defaultIndexProject } from "../indexer/index-project.js";
@@ -130,6 +132,13 @@ export async function runTool(ctx: ToolCtx, name: string, args: Args = {}): Prom
     case "get_overview":
       return withStore(ctx, (store) => getOverview(store));
 
+    case "export_graph_json":
+      return withStoreAsync(ctx, async (store) => {
+        const out = (args.out as string | undefined) ?? join(dirname(ctx.dbPath), "graph.json");
+        const g = await writeGraphJson(store, out);
+        return { path: out, ...g.meta };
+      });
+
     default:
       return { error: "unknown-tool", name };
   }
@@ -147,6 +156,21 @@ function withStore<T>(ctx: ToolCtx, fn: (store: GraphStore) => T): T | { error: 
   const store = GraphStore.open(ctx.dbPath);
   try {
     return fn(store);
+  } finally {
+    store.close();
+  }
+}
+
+async function withStoreAsync<T>(
+  ctx: ToolCtx,
+  fn: (store: GraphStore) => Promise<T>,
+): Promise<T | { error: string; message: string }> {
+  if (!existsSync(ctx.dbPath)) {
+    return { error: "no-index", message: `no index at ${ctx.dbPath} — run index_project first` };
+  }
+  const store = GraphStore.open(ctx.dbPath);
+  try {
+    return await fn(store);
   } finally {
     store.close();
   }

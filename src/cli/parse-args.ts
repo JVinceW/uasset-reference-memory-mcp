@@ -1,6 +1,6 @@
 import { isAbsolute, join, resolve } from "node:path";
 
-export type CliCommand = "index" | "snapshot" | "restore" | "help";
+export type CliCommand = "index" | "snapshot" | "restore" | "export-json" | "help";
 
 export interface CliArgs {
   command: CliCommand;
@@ -9,10 +9,12 @@ export interface CliArgs {
   force: boolean;
   /** For `index`: also export a shared snapshot after building. */
   snapshot: boolean;
+  /** Output path override (e.g. for `export-json`). */
+  out?: string;
   unityVersion?: string;
 }
 
-const COMMANDS = new Set(["index", "snapshot", "restore"]);
+const COMMANDS = new Set(["index", "snapshot", "restore", "export-json"]);
 
 /**
  * Parse `<index|snapshot|restore> [root] [--force] [--snapshot] [--db <path>]
@@ -27,6 +29,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
   let force = false;
   let snapshot = false;
   let dbPath: string | undefined;
+  let out: string | undefined;
   let unityVersion: string | undefined;
   let root: string | undefined;
 
@@ -35,6 +38,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
     if (arg === "--force") force = true;
     else if (arg === "--snapshot") snapshot = true;
     else if (arg === "--db") dbPath = argv[++i];
+    else if (arg === "--out") out = argv[++i];
     else if (arg === "--unity") unityVersion = argv[++i];
     else if (!arg.startsWith("--")) root = arg;
   }
@@ -46,6 +50,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
     dbPath: dbPath ?? join(projectRoot, ".asset-memory", "index.db"),
     force,
     snapshot,
+    out,
     unityVersion,
   };
 }
