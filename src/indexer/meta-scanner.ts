@@ -10,6 +10,23 @@ const META_SUFFIX = ".meta";
 /** The Unity source roots we scan, relative to the project root. */
 const SCAN_ROOTS = ["Assets", "Packages", "Library/PackageCache"];
 
+/** Package-manager files at the Packages root that are not Unity assets. */
+const NON_ASSET_FILES = new Set(["manifest.json", "packages-lock.json"]);
+
+/**
+ * Entries Unity itself does not import (so they carry no `.meta`): hidden
+ * dotfiles/dirs (`.DS_Store`, `.signature.p7s`, `.git`, ...), backup `~` files,
+ * `cvs`, `.tmp`, and the package-manager manifests. Skipping them keeps
+ * missing-meta warnings meaningful.
+ */
+function isIgnoredEntry(name: string): boolean {
+  if (name.startsWith(".")) return true;
+  if (name.endsWith("~")) return true;
+  if (name.endsWith(".tmp")) return true;
+  const lower = name.toLowerCase();
+  return lower === "cvs" || NON_ASSET_FILES.has(lower);
+}
+
 /**
  * Walk a Unity project and produce one asset node per asset that carries a
  * `.meta` (US-001, the meta-scanner). Emits warnings for metas without assets,
@@ -39,6 +56,7 @@ async function walk(
   const names = new Set(entries.map((e) => e.name));
 
   for (const entry of entries) {
+    if (isIgnoredEntry(entry.name)) continue;
     const relPath = `${relDir}/${entry.name}`;
 
     if (entry.name.endsWith(META_SUFFIX)) {

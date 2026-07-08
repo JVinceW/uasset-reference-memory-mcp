@@ -46,6 +46,13 @@ beforeAll(async () => {
   // Asset file with no meta -> missing-meta warning
   await writeFile(join(root, "Assets/NoMeta.txt"), "loose file");
 
+  // Non-asset files that legitimately have no .meta (should be ignored, not warned)
+  await mkdir(join(root, "Packages"), { recursive: true });
+  await writeFile(join(root, "Assets/.DS_Store"), "junk");
+  await writeFile(join(root, "Assets/.signature.p7s"), "sig");
+  await writeFile(join(root, "Packages/manifest.json"), "{}");
+  await writeFile(join(root, "Packages/packages-lock.json"), "{}");
+
   // Packages/com.foo.bar/Widget.asset -> origin package
   await mkdir(join(root, "Packages/com.foo.bar"), { recursive: true });
   await writeFile(join(root, "Packages/com.foo.bar/Widget.asset"), "%YAML 1.1\n--- !u!114 &3\n");
@@ -118,5 +125,13 @@ describe("scanProject", () => {
         (w) => w.kind === "missing-meta" && w.path.endsWith("NoMeta.txt"),
       ),
     ).toBe(true);
+  });
+
+  test("does not warn (or node) on ignored non-asset files", () => {
+    const noisy = [".DS_Store", ".signature.p7s", "manifest.json", "packages-lock.json"];
+    for (const n of noisy) {
+      expect(result.warnings.some((w) => w.path.endsWith(n))).toBe(false);
+      expect(result.nodes.some((node) => node.name === n)).toBe(false);
+    }
   });
 });
