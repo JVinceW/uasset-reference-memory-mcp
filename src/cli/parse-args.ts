@@ -1,6 +1,6 @@
 import { isAbsolute, join, resolve } from "node:path";
 
-export type CliCommand = "index" | "snapshot" | "restore" | "export-json" | "help";
+export type CliCommand = "index" | "snapshot" | "restore" | "export-json" | "verify-index" | "help";
 
 export interface CliArgs {
   command: CliCommand;
@@ -11,14 +11,15 @@ export interface CliArgs {
   snapshot: boolean;
   /** Output path override (e.g. for `export-json`). */
   out?: string;
+  /** Unity Editor dependency export required by `verify-index`. */
+  verifyJsonPath?: string;
   unityVersion?: string;
 }
 
-const COMMANDS = new Set(["index", "snapshot", "restore", "export-json"]);
+const COMMANDS = new Set(["index", "snapshot", "restore", "export-json", "verify-index"]);
 
 /**
- * Parse `<index|snapshot|restore> [root] [--force] [--snapshot] [--db <path>]
- * [--unity <version>]`.
+ * Parse a CLI command with its project root and path overrides.
  */
 export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
   const command = argv[0];
@@ -30,6 +31,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
   let snapshot = false;
   let dbPath: string | undefined;
   let out: string | undefined;
+  let verifyJsonPath: string | undefined;
   let unityVersion: string | undefined;
   let root: string | undefined;
 
@@ -39,6 +41,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
     else if (arg === "--snapshot") snapshot = true;
     else if (arg === "--db") dbPath = argv[++i];
     else if (arg === "--out") out = argv[++i];
+    else if (arg === "--verify") verifyJsonPath = argv[++i];
     else if (arg === "--unity") unityVersion = argv[++i];
     else if (!arg.startsWith("--")) root = arg;
   }
@@ -51,6 +54,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
     force,
     snapshot,
     out,
+    verifyJsonPath,
     unityVersion,
   };
 }

@@ -10,6 +10,8 @@ import { exportSnapshot, importSnapshot } from "../snapshot/snapshot.js";
 import { writeGraphJson } from "../snapshot/json-export.js";
 import { GraphStore } from "../store/graph-store.js";
 import { isMainModule } from "../util/is-main.js";
+import { runVerification } from "../verification/run.js";
+import { summarizeVerification } from "../verification/summary.js";
 
 const VERSION: string | null = (() => {
   try {
@@ -26,6 +28,7 @@ Usage:
   unity-asset-reference-mcp-index snapshot    [projectRoot] [--db <path>]              # export a shareable snapshot
   unity-asset-reference-mcp-index restore     [projectRoot] [--db <path>]              # rebuild the live index from a snapshot
   unity-asset-reference-mcp-index export-json [projectRoot] [--db <path>] [--out <p>]  # write a git-diffable graph.json
+  unity-asset-reference-mcp-index verify-index [projectRoot] --verify <verify.json> [--db <path>] [--out <p>]
 
 Snapshots (index.db.br + artifact.json) are compressed and meant to be committed;
 the live index.db is meant to be gitignored. See the README for the .gitignore split.`;
@@ -76,6 +79,33 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
       store.close();
     }
     return 0;
+  }
+
+  if (args.command === "verify-index") {
+    if (!args.verifyJsonPath) {
+      console.error("verify-index requires --verify <verify.json>");
+      return 1;
+    }
+    try {
+      const { report, reportPath } = await runVerification({
+        dbPath: args.dbPath,
+        verifyJsonPath: args.verifyJsonPath,
+        reportPath: args.out,
+      });
+      const summary = summarizeVerification(report, reportPath);
+      console.log(`Verification ${summary.status}`);
+      console.log(`  Unity dependencies: ${summary.unityDependencyCount}`);
+      console.log(`  indexed dependencies: ${summary.indexedDependencyCount}`);
+      console.log(`  matched: ${summary.matchedCount}`);
+      console.log(`  missed: ${summary.missedEdgeCount}`);
+      console.log(`  extra: ${summary.extraEdgeCount}`);
+      console.log(`  unresolved: ${summary.unresolvedAssetCount + summary.unresolvedDependencyCount}`);
+      console.log(`  report: ${summary.reportPath}`);
+      return 0;
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 1;
+    }
   }
 
   if (args.command === "snapshot") {

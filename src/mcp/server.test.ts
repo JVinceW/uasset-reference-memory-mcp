@@ -45,6 +45,7 @@ describe("MCP server", () => {
       expect.arrayContaining([
         "index_project", "index_status", "get_dependencies", "find_references",
         "trace_path", "find_unused_assets", "search_assets", "get_overview",
+        "verify_index",
       ]),
     );
   });

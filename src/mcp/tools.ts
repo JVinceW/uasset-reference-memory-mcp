@@ -12,6 +12,8 @@ import { indexProject as defaultIndexProject } from "../indexer/index-project.js
 import { ensureLiveIndex } from "../snapshot/snapshot.js";
 import { loadConfig, configPathFor, type AddressableRoots } from "../config/project-config.js";
 import type { AssetType, Origin } from "../indexer/types.js";
+import { runVerification } from "../verification/run.js";
+import { summarizeVerification } from "../verification/summary.js";
 
 export interface ToolCtx {
   /** Path to the index SQLite file. */
@@ -50,6 +52,24 @@ export async function runTool(ctx: ToolCtx, name: string, args: Args = {}): Prom
         unresolvedCount: store.unresolvedCount(),
         packagesLockMtime: store.getMeta("packages_lock_mtime"),
       }));
+
+    case "verify_index": {
+      if (typeof args.verifyJsonPath !== "string" || args.verifyJsonPath === "") {
+        return { error: "missing-verify-json", message: "provide verifyJsonPath" };
+      }
+      try {
+        const { report, reportPath } = await runVerification({
+          dbPath: ctx.dbPath,
+          verifyJsonPath: args.verifyJsonPath,
+        });
+        return summarizeVerification(report, reportPath);
+      } catch (error) {
+        return {
+          error: "verification-failed",
+          message: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
 
     case "get_dependencies":
       return withStore(ctx, (store) =>

@@ -1,41 +1,40 @@
 # MCP Tool Contract
 
-Nine tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
+Twelve tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
 
 ## Indexing
 
 | Tool | Behavior |
 | --- | --- |
-| `index_project(path, force?)` | Full scan → build DB. Default incremental (re-parse only changed `mtime`); `force: true` rebuilds. Manual trigger only. Returns counts + warnings. |
-| `index_status()` | Asset/edge counts, last-indexed time, unresolved-ref count, warnings, staleness hints (files or `packages-lock.json` newer than index). |
+| `index_project(path, force?)` | Full scan and DB build. Default incremental mode re-parses only changed files. |
+| `index_status()` | Index location, counts, and last-indexed time. |
 
 ## Core Queries
 
 | Tool | Behavior |
 | --- | --- |
-| `find_references(asset, depth?)` | **Impact analysis.** Who references this asset — direct or transitive up to `depth`. `asset` accepts path, GUID, or name. Returns referrer chains with `context` (why). |
-| `get_edges(from?, to?, kind?, limit?)` | **Raw edge inspection.** The individual reference edges (each `ref_kind` + YAML `context` + `fileId` + `count`) between/for assets — the rows behind the aggregated views. |
-| `get_dependencies(asset, depth?)` | Forward: everything this asset pulls in. `depth: -1` = full closure. |
-| `find_unused_assets(scope?, roots?)` | Orphans unreachable from roots. Default roots: scenes + `Resources/` + their closures. `scope` narrows to a folder. **Project-origin only.** Sorted by `file_size` descending. |
-| `trace_path(from, to)` | Shortest reference chain between two assets. |
+| `find_references(asset, depth?)` | Impact analysis: direct or transitive referrers. |
+| `get_edges(from?, to?, kind?, limit?)` | Raw reference-site rows with kind, context, file ID, and count. |
+| `get_dependencies(asset, depth?)` | Forward dependencies. `depth: -1` is full closure. |
+| `find_unused_assets(scope?, roots?)` | Project-origin assets unreachable from configured roots. |
+| `trace_path(from, to)` | Shortest reference chain. |
 
 ## Exploration
 
 | Tool | Behavior |
 | --- | --- |
-| `search_assets(name?, type?, path_prefix?, origin?, min_refs?, max_refs?)` | Structured node search with inbound/outbound ref-count filters. |
-| `get_overview()` | Counts by type/origin, top dependency hubs (most-referenced), broken-ref summary, per-package usage, biggest folders. |
-| `export_graph_json(out?)` | Write a git-diffable JSON export of the whole graph (assets/edges/unresolved/addressables), stable-ordered. Returns the path + counts. |
-| `manage_adr(action, ...)` | Architecture Decision Records as markdown under `.asset-memory/adrs/`. `action` = create/list/get/update. |
+| `search_assets(name?, type?, pathPrefix?, origin?, minRefs?, maxRefs?)` | Structured node search and reference-count filters. |
+| `get_overview()` | Counts, hubs, broken references, package usage, and largest folders. |
+| `export_graph_json(out?)` | Writes a stable, git-diffable JSON export of the graph. |
+| `manage_adr(action, ...)` | Manages Markdown ADRs under `.asset-memory/adrs/`. |
 
 ## Verification
 
 | Tool | Behavior |
 | --- | --- |
-| `verify_index(verify_json_path)` | Diffs Unity's `AssetDatabase.GetDependencies` export against the graph. Reports edges Unity sees that we miss, edges we have that Unity does not, per-category counts. The static parser's accuracy meter. See `docs/product/verification.md`. |
+| `verify_index(verifyJsonPath)` | Compares a Unity `verify.json` export with the graph. Returns totals, full category counts, at most ten missed and extra samples, and the full on-disk `verify-report.json` path. See `docs/product/verification.md`. |
 
-## Deliberately excluded (v1)
+## Deliberately Excluded
 
-No raw-SQL MCP tool. External tools get full power by opening the SQLite file
-directly; agents get the curated tools above. A read-only `query_sql` tool may be
-added later if the curated set proves limiting.
+There is no raw-SQL MCP tool in v1. External tools can open the SQLite file
+directly; agents receive the curated graph surface.

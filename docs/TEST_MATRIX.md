@@ -2,8 +2,8 @@
 
 This file maps product behavior to proof.
 
-No product behavior has been defined or implemented yet. Do not mark a row
-implemented until tests or validation evidence exist.
+Rows are added as story packets are implemented. Do not mark a row implemented
+until tests or validation evidence exist.
 
 ## Status Values
 
@@ -19,7 +19,7 @@ implemented until tests or validation evidence exist.
 
 | Story | Contract | Unit | Integration | E2E | Platform | Status | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| TBD | Add rows when story packets are created | no | no | no | no | planned | none |
+| US-023 | Unity export validation, GUID-pair diff, bounded MCP/CLI summary, full on-disk report | yes | yes | no | pending Unity Editor smoke | implemented | `npm test` (195); `npm run typecheck`; `npm run build`; root and UPM `npm pack --dry-run`; platform proof pending |
 
 ## Evidence Rules
 

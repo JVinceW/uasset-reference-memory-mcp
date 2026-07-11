@@ -1,0 +1,16 @@
+{
+  "name": "com.jvincew.assetreferencememory",
+  "displayName": "Asset Reference Memory",
+  "version": "0.2.0",
+  "unity": "2021.3",
+  "description": "Exports Unity AssetDatabase dependency truth for unity-asset-reference-mcp verification.",
+  "keywords": [
+    "asset",
+    "dependency",
+    "verification",
+    "mcp"
+  ],
+  "author": {
+    "name": "JVinceW"
+  }
+}

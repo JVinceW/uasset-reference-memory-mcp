@@ -63,9 +63,36 @@ commit the config and (optional) shared snapshot:
 .asset-memory/index.db
 .asset-memory/index.db-*
 .asset-memory/*.building-*
+.asset-memory/verify.json
+.asset-memory/verify-report.json
 ```
 
-## 2. MCP server (works with any MCP client)
+## 2. Verify parser accuracy (optional)
+
+Verification is a manual accuracy check. Install the Unity Editor exporter
+separately through Unity Package Manager, keeping the Node tool and Unity
+integration independently installable:
+
+```text
+https://github.com/JVinceW/uasset-reference-memory-mcp.git?path=/unity/com.jvincew.assetreferencememory#<release-tag>
+```
+
+In Unity, run **Tools > Asset Reference Memory > Export Verification**. It
+writes `<project>/.asset-memory/verify.json`. Compare that export with the
+index through the CLI:
+
+```bash
+unity-asset-reference-mcp-index verify-index /path/to/UnityProject \
+  --verify /path/to/UnityProject/.asset-memory/verify.json
+```
+
+The command exits successfully when differences are found. It prints a bounded
+summary and writes every missed/extra edge to
+`<project>/.asset-memory/verify-report.json`. MCP clients use
+`verify_index(verifyJsonPath)` and receive the same summary plus the report
+path.
+
+## 3. MCP server (works with any MCP client)
 
 This is a standard **stdio MCP server** — it works with any MCP-compatible host:
 Claude Code/Desktop, Cursor, Windsurf, Cline, VS Code (Copilot agent), Zed, and

@@ -43,4 +43,13 @@ describe("parseArgs", () => {
     expect(parseArgs(["index", "/proj", "--snapshot"]).snapshot).toBe(true);
     expect(parseArgs(["index", "/proj"]).snapshot).toBe(false);
   });
+
+  test("parses verify-index with its Unity export and report output paths", () => {
+    const args = parseArgs(["verify-index", "/proj", "--verify", "/tmp/verify.json", "--db", "/tmp/index.db", "--out", "/tmp/report.json"]);
+    expect(args.command).toBe("verify-index");
+    expect(args.projectRoot).toBe("/proj");
+    expect(args.verifyJsonPath).toBe("/tmp/verify.json");
+    expect(args.dbPath).toBe("/tmp/index.db");
+    expect(args.out).toBe("/tmp/report.json");
+  });
 });

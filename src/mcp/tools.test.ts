@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
@@ -76,6 +76,27 @@ describe("runTool", () => {
     const s = (await runTool(ctx, "index_status")) as { assetCount: number; schemaVersion: string };
     expect(s.assetCount).toBe(4);
     expect(s.schemaVersion).toBe("2");
+  });
+
+  test("verify_index returns a bounded summary and writes the full report", async () => {
+    const verifyJsonPath = join(dir, "verify.json");
+    await writeFile(verifyJsonPath, JSON.stringify({
+      schemaVersion: 1,
+      unityVersion: "2022.3.0f1",
+      exportedAt: "2026-07-12T00:00:00.000Z",
+      assets: [{
+        path: "Assets/P.prefab",
+        guid: g("b"),
+        dependencies: [{ path: "Assets/M.mat", guid: g("c") }],
+      }],
+    }));
+
+    const result = (await runTool(ctx, "verify_index", { verifyJsonPath })) as {
+      status: string; reportPath: string; matchedCount: number; fullDetailsInReport: boolean;
+    };
+
+    expect(result).toMatchObject({ status: "clean", matchedCount: 1, fullDetailsInReport: true });
+    expect(result.reportPath).toBe(join(dir, "verify-report.json"));
   });
 
   test("read tools error cleanly when no index exists", async () => {

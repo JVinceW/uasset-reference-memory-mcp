@@ -38,8 +38,8 @@ manually-triggered C# Unity Editor step verifies the graph against
 | Epic | Description | Status |
 | --- | --- | --- |
 | E01 | Static index core: scan, GUID map, nodes, edges, packages, SQLite store | sliced |
-| E02 | MCP query tools: index/status/impact/unused/trace/search/overview | unsliced |
-| E03 | Verification: Unity C# exporter + `verify_index` diff | unsliced |
+| E02 | MCP query tools: index/status/impact/unused/trace/search/overview | implemented |
+| E03 | Verification: Unity C# exporter + `verify_index` diff | implemented |
 
 ## Architecture Questions
 
