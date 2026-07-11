@@ -37,3 +37,6 @@ spot-*.mjs
 
 # Tool index output (when indexing a project that lives inside this repo).
 .asset-memory/
+
+# Local Git worktrees used for isolated feature development.
+.worktrees/
