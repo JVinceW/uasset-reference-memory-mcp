@@ -1,0 +1,4 @@
+interface:
+  display_name: "Harness Intake Griller"
+  short_description: "Classify Harness work and prepare safe task context."
+  default_prompt: "Use this repo-local skill to classify my request through Harness intake and prepare the working context."

@@ -82,5 +82,5 @@ manually-triggered C# Unity Editor step verifies the graph against
 - Recorded intake #1 (`new_spec`, normal).
 - Added `CLAUDE.md` harness import block (Claude Code does not auto-load
   `AGENTS.md`).
-- Noted known-missing skill reference: `AGENTS.md:5` points to
-  `.codex/skills/harness-intake-griller/SKILL.md`, absent on disk.
+- Added the repo-local Codex skill referenced by `AGENTS.md:5` at
+  `.codex/skills/harness-intake-griller/SKILL.md`.

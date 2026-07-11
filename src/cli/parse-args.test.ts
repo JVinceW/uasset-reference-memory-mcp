@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { join } from "node:path";
 import { parseArgs } from "./parse-args.js";
 
 describe("parseArgs", () => {
@@ -6,14 +7,14 @@ describe("parseArgs", () => {
     const a = parseArgs(["index", "/proj"]);
     expect(a.command).toBe("index");
     expect(a.projectRoot).toBe("/proj");
-    expect(a.dbPath).toBe("/proj/.asset-memory/index.db");
+    expect(a.dbPath).toBe(join("/proj", ".asset-memory", "index.db"));
     expect(a.force).toBe(false);
   });
 
   test("defaults project root to cwd when omitted", () => {
     const a = parseArgs(["index"], "/cwd");
     expect(a.projectRoot).toBe("/cwd");
-    expect(a.dbPath).toBe("/cwd/.asset-memory/index.db");
+    expect(a.dbPath).toBe(join("/cwd", ".asset-memory", "index.db"));
   });
 
   test("honors --force and --db and --unity in any order", () => {
@@ -32,7 +33,7 @@ describe("parseArgs", () => {
   test("parses the snapshot and restore commands like index", () => {
     const snap = parseArgs(["snapshot", "/proj"]);
     expect(snap.command).toBe("snapshot");
-    expect(snap.dbPath).toBe("/proj/.asset-memory/index.db");
+    expect(snap.dbPath).toBe(join("/proj", ".asset-memory", "index.db"));
 
     const restore = parseArgs(["restore", "/proj"]);
     expect(restore.command).toBe("restore");

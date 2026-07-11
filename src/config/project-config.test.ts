@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { join } from "node:path";
 import { parseConfig, configPathFor, DEFAULT_CONFIG } from "./project-config.js";
 
 describe("parseConfig", () => {
@@ -28,7 +29,7 @@ describe("parseConfig", () => {
 
 describe("configPathFor", () => {
   test("co-locates config with the index db", () => {
-    expect(configPathFor("/proj/.asset-memory/index.db")).toBe("/proj/.asset-memory/config.json");
+    expect(configPathFor("/proj/.asset-memory/index.db")).toBe(join("/proj/.asset-memory", "config.json"));
   });
 });
 
