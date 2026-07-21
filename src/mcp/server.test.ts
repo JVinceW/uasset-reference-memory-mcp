@@ -40,14 +40,30 @@ afterAll(async () => {
 
 describe("MCP server", () => {
   test("lists the asset-graph tools", async () => {
-    const names = (await client.listTools()).tools.map((t) => t.name);
+    const tools = (await client.listTools()).tools;
+    const names = tools.map((t) => t.name);
     expect(names).toEqual(
       expect.arrayContaining([
         "index_project", "index_status", "get_dependencies", "find_references",
         "trace_path", "find_unused_assets", "search_assets", "get_overview",
         "verify_index",
+        "get_addressable_info", "search_addressables", "list_addressable_groups",
       ]),
     );
+    expect(names).toHaveLength(15);
+
+    const searchAddressables = tools.find((tool) => tool.name === "search_addressables");
+    expect(searchAddressables?.inputSchema).toMatchObject({
+      properties: {
+        query: expect.any(Object),
+        group: expect.any(Object),
+        label: expect.any(Object),
+        pathPrefix: expect.any(Object),
+        type: expect.any(Object),
+        reachableOnlyBecauseAddressable: expect.any(Object),
+        limit: expect.any(Object),
+      },
+    });
   });
 
   test("calls get_dependencies and returns JSON content", async () => {

@@ -29,8 +29,16 @@ beforeAll(async () => {
     node(g("b"), "Assets/P.prefab"),
     node(g("c"), "Assets/M.mat", "Material"),
     node(g("o"), "Assets/Orphan.png", "Texture"),
+    node(g("d"), "Assets/UI/Profile.prefab"),
   ]);
   store.insertEdges([edge(g("a"), g("b")), edge(g("b"), g("c"))]);
+  store.replaceAddressableGroups([{
+    groupGuid: g("e"),
+    assetGuid: g("f"),
+    name: "UI Remote",
+    path: "Assets/AddressableAssetsData/AssetGroups/UI.asset",
+    entries: [{ guid: g("d"), address: "ui/profile", readOnly: false, labels: ["remote"] }],
+  }]);
   store.db.pragma("wal_checkpoint(TRUNCATE)");
   store.close();
   ctx = { dbPath };
@@ -40,7 +48,7 @@ afterAll(async () => { await rm(dir, { recursive: true, force: true }); });
 describe("runTool", () => {
   test("get_overview returns counts", async () => {
     const o = (await runTool(ctx, "get_overview")) as { totalAssets: number };
-    expect(o.totalAssets).toBe(4);
+    expect(o.totalAssets).toBe(5);
   });
 
   test("get_dependencies summarizes the forward subgraph", async () => {
@@ -74,7 +82,7 @@ describe("runTool", () => {
 
   test("index_status reports the store meta", async () => {
     const s = (await runTool(ctx, "index_status")) as { assetCount: number; schemaVersion: string };
-    expect(s.assetCount).toBe(4);
+    expect(s.assetCount).toBe(5);
     expect(s.schemaVersion).toBe("3");
   });
 
@@ -98,6 +106,46 @@ describe("runTool", () => {
     expect(result).toMatchObject({ status: "clean", matchedCount: 1, fullDetailsInReport: true });
     expect(result.reportPath).toBe(join(dir, "verify-report.json"));
   });
+
+  test("get_addressable_info returns membership and reachability", async () => {
+    expect(await runTool(ctx, "get_addressable_info", { asset: "ui/profile" })).toMatchObject({
+      status: "found",
+      isAddressable: true,
+      reachableOnlyBecauseAddressable: true,
+    });
+  });
+
+  test("search_addressables returns filtered entries", async () => {
+    expect(await runTool(ctx, "search_addressables", { group: "UI", label: "remote" })).toMatchObject({
+      total: 1,
+      truncated: false,
+    });
+  });
+
+  test("list_addressable_groups returns group inventory", async () => {
+    expect(await runTool(ctx, "list_addressable_groups")).toMatchObject({
+      total: 1,
+      groups: [{ name: "UI Remote", entryCount: 1 }],
+    });
+  });
+
+  test.each(["get_addressable_info", "search_addressables", "list_addressable_groups"])(
+    "%s rejects an outdated index before opening it",
+    async (toolName) => {
+      const oldDbPath = join(dir, `${toolName}.db`);
+      const oldStore = GraphStore.open(oldDbPath);
+      oldStore.setMeta("schema_version", "2");
+      oldStore.db.pragma("wal_checkpoint(TRUNCATE)");
+      oldStore.close();
+
+      expect(await runTool({ dbPath: oldDbPath }, toolName, { asset: "ui/profile" })).toEqual({
+        error: "schema-mismatch",
+        expected: 3,
+        actual: 2,
+        message: "index schema 2 is incompatible with this tool; run index_project to rebuild schema 3",
+      });
+    },
+  );
 
   test("read tools error cleanly when no index exists", async () => {
     const r = (await runTool({ dbPath: join(dir, "missing.db") }, "get_overview")) as {

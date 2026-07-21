@@ -14,6 +14,12 @@ import { loadConfig, configPathFor, type AddressableRoots } from "../config/proj
 import type { AssetType, Origin } from "../indexer/types.js";
 import { runVerification } from "../verification/run.js";
 import { summarizeVerification } from "../verification/summary.js";
+import {
+  getAddressableInfo,
+  listAddressableGroups,
+  searchAddressables,
+} from "../query/addressables.js";
+import { SCHEMA_VERSION } from "../store/schema.js";
 
 export interface ToolCtx {
   /** Path to the index SQLite file. */
@@ -150,6 +156,30 @@ export async function runTool(ctx: ToolCtx, name: string, args: Args = {}): Prom
         };
       });
 
+    case "get_addressable_info":
+      return withCurrentStore(ctx, (store) =>
+        getAddressableInfo(store, String(args.asset ?? "")),
+      );
+
+    case "search_addressables":
+      return withCurrentStore(ctx, (store) =>
+        searchAddressables(store, {
+          query: args.query as string | undefined,
+          group: args.group as string | undefined,
+          label: args.label as string | undefined,
+          pathPrefix: args.pathPrefix as string | undefined,
+          type: args.type as AssetType | undefined,
+          reachableOnlyBecauseAddressable: args.reachableOnlyBecauseAddressable as boolean | undefined,
+          limit: args.limit as number | undefined,
+        }),
+      );
+
+    case "list_addressable_groups":
+      return withCurrentStore(ctx, (store) => {
+        const groups = listAddressableGroups(store);
+        return { total: groups.length, groups };
+      });
+
     case "get_overview":
       return withStore(ctx, (store) => getOverview(store));
 
@@ -205,6 +235,25 @@ function withStore<T>(ctx: ToolCtx, fn: (store: GraphStore) => T): T | { error: 
   } finally {
     store.close();
   }
+}
+
+function withCurrentStore<T>(
+  ctx: ToolCtx,
+  fn: (store: GraphStore) => T,
+): T | { error: string; message: string; expected?: number; actual?: number | null } {
+  if (!existsSync(ctx.dbPath)) {
+    return { error: "no-index", message: `no index at ${ctx.dbPath} â€” run index_project first` };
+  }
+  const actual = GraphStore.readSchemaVersion(ctx.dbPath);
+  if (actual !== SCHEMA_VERSION) {
+    return {
+      error: "schema-mismatch",
+      expected: SCHEMA_VERSION,
+      actual,
+      message: `index schema ${actual ?? 0} is incompatible with this tool; run index_project to rebuild schema ${SCHEMA_VERSION}`,
+    };
+  }
+  return withStore(ctx, fn);
 }
 
 async function withStoreAsync<T>(
