@@ -27,7 +27,7 @@ describe("exportGraphJson", () => {
     const store = buildStore();
     const j = exportGraphJson(store);
     expect(j.meta).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       indexedAt: "2026-07-08T00:00:00.000Z",
       assetCount: 2,
       edgeCount: 1,

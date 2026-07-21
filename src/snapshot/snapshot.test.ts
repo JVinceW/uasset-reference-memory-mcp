@@ -44,7 +44,7 @@ describe("exportSnapshot", () => {
 
     expect(artifact.asset_count).toBe(2);
     expect(artifact.edge_count).toBe(1);
-    expect(artifact.schema_version).toBe(2);
+    expect(artifact.schema_version).toBe(3);
     expect(artifact.tool_version).toBe("0.1.0");
     expect(artifact.git_commit).toBe("abc123");
     expect(artifact.compressed_size).toBeLessThan(artifact.original_size);

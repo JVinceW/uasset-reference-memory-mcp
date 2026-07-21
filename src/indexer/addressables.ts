@@ -25,9 +25,6 @@ export class AddressableParseError extends Error {
   }
 }
 
-/** Temporary entry-only type retained until the indexer consumes groups. */
-export type AddressableEntry = AddressableGroupEntry;
-
 const GROUP_MARKER = /^(\s*)m_SerializeEntries:\s*(?:\[\])?\s*$/;
 const GROUP_NAME = /^m_Name:\s*(.*?)\s*$/;
 const GROUP_GUID = /^m_GUID:\s*([0-9a-fA-F]{32})\s*$/;
@@ -146,9 +143,4 @@ function parseEntries(lines: string[], startIndex: number, groupIndent: string):
   }
 
   return entries;
-}
-
-/** Compatibility wrapper for the entry-only indexer caller. */
-export function extractAddressableEntries(content: string): AddressableEntry[] {
-  return extractAddressableGroup(content, { assetGuid: "", path: "<unknown>" })?.entries ?? [];
 }

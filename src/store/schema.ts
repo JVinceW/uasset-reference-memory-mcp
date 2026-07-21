@@ -3,7 +3,7 @@
  * tool reads these tables directly. See docs/product/asset-graph-model.md.
  * Bump SCHEMA_VERSION on any breaking change and record it in a decision.
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS assets (
@@ -44,8 +44,29 @@ CREATE TABLE IF NOT EXISTS index_meta (
   value TEXT
 );
 
-CREATE TABLE IF NOT EXISTS addressable_entries (
-  guid    TEXT PRIMARY KEY,
-  address TEXT
+CREATE TABLE IF NOT EXISTS addressable_groups (
+  group_guid TEXT PRIMARY KEY,
+  asset_guid TEXT NOT NULL UNIQUE,
+  name       TEXT NOT NULL,
+  path       TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS addressable_entries (
+  guid       TEXT PRIMARY KEY,
+  address    TEXT NOT NULL,
+  group_guid TEXT NOT NULL REFERENCES addressable_groups(group_guid) ON DELETE CASCADE,
+  read_only  INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_addressable_entries_address
+  ON addressable_entries(address);
+CREATE INDEX IF NOT EXISTS idx_addressable_entries_group
+  ON addressable_entries(group_guid);
+
+CREATE TABLE IF NOT EXISTS addressable_entry_labels (
+  entry_guid TEXT NOT NULL REFERENCES addressable_entries(guid) ON DELETE CASCADE,
+  label      TEXT NOT NULL,
+  PRIMARY KEY (entry_guid, label)
+);
+CREATE INDEX IF NOT EXISTS idx_addressable_labels_label
+  ON addressable_entry_labels(label);
 `;

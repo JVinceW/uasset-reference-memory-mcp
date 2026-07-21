@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { GraphStore } from "./graph-store.js";
 import { SCHEMA_VERSION } from "./schema.js";
 import type { AssetNode, Edge, UnresolvedRef } from "../indexer/types.js";
+import type { AddressableGroup, AddressableGroupEntry } from "../indexer/addressables.js";
 
 function node(over: Partial<AssetNode> & Pick<AssetNode, "guid" | "path">): AssetNode {
   return {
@@ -16,6 +17,20 @@ function node(over: Partial<AssetNode> & Pick<AssetNode, "guid" | "path">): Asse
   };
 }
 
+function entry(guid: string, labels: string[]): AddressableGroupEntry {
+  return { guid: guid.repeat(32), address: `ui/${guid}`, readOnly: false, labels };
+}
+
+function group(name: string, entries: AddressableGroupEntry[]): AddressableGroup {
+  return {
+    groupGuid: "e".repeat(32),
+    assetGuid: "f".repeat(32),
+    name,
+    path: `Assets/AddressableAssetsData/AssetGroups/${name}.asset`,
+    entries,
+  };
+}
+
 describe("GraphStore schema", () => {
   test("creates the four tables and records schema_version", () => {
     const store = GraphStore.open(":memory:");
@@ -27,6 +42,47 @@ describe("GraphStore schema", () => {
       expect.arrayContaining(["assets", "edges", "index_meta", "unresolved_refs"]),
     );
     expect(store.getMeta("schema_version")).toBe(String(SCHEMA_VERSION));
+    store.close();
+  });
+
+  test("schema 3 stores normalized groups, entries, and labels", () => {
+    const store = GraphStore.open(":memory:");
+    expect(store.getMeta("schema_version")).toBe("3");
+    const tables = store.db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+      .all()
+      .map((row) => (row as { name: string }).name);
+    expect(tables).toEqual(
+      expect.arrayContaining([
+        "addressable_groups",
+        "addressable_entries",
+        "addressable_entry_labels",
+      ]),
+    );
+    store.close();
+  });
+});
+
+describe("GraphStore Addressables replacement", () => {
+  test("replacing a changed group removes stale entries and labels", () => {
+    const store = GraphStore.open(":memory:");
+    store.replaceAddressableGroups([group("UI", [entry("a", ["old"]), entry("b", [])])]);
+    store.replaceAddressableGroupsForAssets(
+      ["f".repeat(32)],
+      [group("UI", [entry("a", ["new"])])],
+    );
+    expect(store.addressableCount()).toBe(1);
+    expect(store.db.prepare("SELECT label FROM addressable_entry_labels").all()).toEqual([
+      { label: "new" },
+    ]);
+    store.close();
+  });
+
+  test("replacing a deleted group asset removes its membership", () => {
+    const store = GraphStore.open(":memory:");
+    store.replaceAddressableGroups([group("UI", [entry("a", [])])]);
+    store.replaceAddressableGroupsForAssets(["f".repeat(32)], []);
+    expect(store.addressableCount()).toBe(0);
     store.close();
   });
 });
