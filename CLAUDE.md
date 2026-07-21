@@ -1,16 +1,11 @@
 <!-- HARNESS:BEGIN -->
 # Project Context
 
-This repository uses Harness. Claude Code does not auto-load `AGENTS.md`, so the
-harness entrypoint and intake rules are imported here into every session.
+This repository uses the text-first Harness workflow. Claude Code does not
+auto-load `AGENTS.md`, so its entrypoint is imported here into every session.
 
 @AGENTS.md
-@docs/FEATURE_INTAKE.md
-
-Before changing anything, follow the Task Loop in `docs/HARNESS.md`: classify the
-request through feature intake, record it with the Harness CLI at
-`scripts/bin/harness-cli`, work inside the chosen lane, and record a trace when
-done.
+@docs/WORKFLOW.md
 
 ## Project
 

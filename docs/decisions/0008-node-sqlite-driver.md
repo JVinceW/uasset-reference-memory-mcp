@@ -9,7 +9,7 @@ Accepted
 ## Context
 
 US-003 persists the asset graph into the product's reusable SQLite artifact
-(`.asset-memory/index.db`, distinct from the harness's own `harness.db`). We must
+(`.asset-memory/index.db`). We must
 pick a Node SQLite driver. Goal #5 (reusable artifact) requires a standard
 SQLite file readable by any tool; both candidates satisfy that — the choice is
 about the runtime dependency model, not the file format.

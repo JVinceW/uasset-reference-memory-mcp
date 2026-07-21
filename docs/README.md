@@ -1,35 +1,13 @@
 # Documentation Map
 
-This directory holds the project harness and any product contract derived from a
-future user-provided spec.
+- `WORKFLOW.md`: canonical task, planning, authority, validation, and completion rules.
+- `product/`: current product behavior.
+- `ARCHITECTURE.md`: system boundaries and structural constraints.
+- `plans/`: active and completed durable execution memory.
+- `decisions/`: lasting choices and their rationale.
+- `stories/`: implemented work packets and historical acceptance evidence.
+- `templates/`: templates for new decisions, plans, stories, and validation reports.
 
-## Main Files
-
-- `HARNESS.md`: how humans and agents collaborate.
-- `FEATURE_INTAKE.md`: how prompts become tiny, normal, or high-risk work.
-- `ARCHITECTURE.md`: architecture discovery and boundary rules.
-- `TEST_MATRIX.md`: legacy proof map; current proof status is queried with
-  `scripts/bin/harness-cli query matrix`.
-- `HARNESS_BACKLOG.md`: legacy improvement list; current improvement records
-  are stored with `scripts/bin/harness-cli backlog`.
-- `GLOSSARY.md`: shared terms.
-- `SYMPHONY_QUICKSTART.md`: beginner-facing instructions for running Harness
-  stories through Symphony.
-- `SYMPHONY_SCOPE.md`: detailed scope for the Harness-native agent workbench
-  and orchestration layer.
-
-## Folders
-
-- `product/`: current product truth, empty until a spec is derived.
-- `stories/`: feature packets and backlog.
-- `decisions/`: durable decisions and tradeoffs.
-- `demo/`: concrete walkthroughs that show how the harness transforms input
-  into agent-ready work.
-- `templates/`: reusable spec-intake, story, plan, decision, and validation
-  formats.
-
-## Current State
-
-Harness v0 exists before implementation. These docs define how the project will
-grow; they do not imply that app code, tests, CI, or deployment automation exist
-yet.
+The repository's README, product docs, code, tests, CI, runtime signals, and Git
+history remain authoritative. Harness adds navigation and working-memory
+structure; it does not require a database or local executable.

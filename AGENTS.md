@@ -1,27 +1,24 @@
 # Agent Instructions
 
-## Project Skills
-
-Use `.codex/skills/harness-intake-griller/SKILL.md` when a request needs
-discussion, feature intake, docs, or story shaping before Symphony execution.
-The skill is project-scoped; do not use a global copy as the source of truth.
-
 <!-- HARNESS:BEGIN -->
 ## Harness
 
-This repo uses Harness. Before work, read:
+Start with the requested outcome, then use the repository as the system of
+record. Read `docs/WORKFLOW.md` and only the product, design, plan, code, and
+validation material relevant to the task.
 
-- `README.md`
-- `docs/HARNESS.md`
-- `docs/FEATURE_INTAKE.md`
-- `docs/ARCHITECTURE.md`
-- `docs/CONTEXT_RULES.md`
-- `docs/TOOL_REGISTRY.md`
-- `scripts/bin/harness-cli query matrix` on macOS/Linux, or `.\scripts\bin\harness-cli.exe query matrix` on Windows
-
-Use the Rust Harness CLI at `scripts/bin/harness-cli` on macOS/Linux or
-`scripts/bin/harness-cli.exe` on Windows as the main operational tool. Before a
-step that could use an external tool, run `scripts/bin/harness-cli query tools
---capability <name> --status present` to see what is equipped; an absent
-capability is a clean skip.
+- Answers, explanations, reviews, diagnoses, plans, and status reports are
+  read-only. Inspect only what is needed and do not mutate repository state.
+- For a bounded change, use an ephemeral plan: inspect the affected behavior and
+  existing proof, implement the change, and run behavior-appropriate validation.
+- Create or update one file under `docs/plans/active/` when work spans sessions,
+  needs coordination or an ordered sequence, has meaningful dependencies, or
+  requires explicit recovery steps. Move it to `docs/plans/completed/` only
+  after validation.
+- Before editing, identify repository authority for each new externally
+  observable policy. Pause if materially different choices remain open, product
+  intent is ambiguous, an action is difficult to recover, or validation would
+  be weakened.
+- Claim completion only with relevant executable or observable evidence. Report
+  the outcome, important changed surfaces, validation, and unresolved risks.
 <!-- HARNESS:END -->

@@ -212,8 +212,8 @@ npm test        # vitest
 npm run build   # tsc + copy web assets to dist/
 ```
 
-This repo also uses an internal agent **Harness** for development process (see
-[docs/HARNESS.md](docs/HARNESS.md)); it is not part of the shipped package.
+This repo uses a Git-native, text-first development workflow (see
+[docs/WORKFLOW.md](docs/WORKFLOW.md)); it is not part of the shipped package.
 
 ## License
 

@@ -1,7 +1,8 @@
 # Roadmap / TODO
 
-Planned work, noted for later. Not yet implemented. Tracked in the harness
-backlog (`scripts/bin/harness-cli query backlog`).
+Planned work, noted for later. Not yet implemented. This Git-tracked document
+is the backlog; promote complex initiatives to an execution plan when work
+begins.
 
 ---
 
