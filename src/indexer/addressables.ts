@@ -26,6 +26,9 @@ export class AddressableParseError extends Error {
 }
 
 const GROUP_MARKER = /^(\s*)m_SerializeEntries:\s*(?:\[\])?\s*$/;
+const YAML_DOCUMENT = /^---(?:\s|$)/;
+const ADDRESSABLE_GROUP_SCRIPT_GUID = "bbb281ee3bf0b054c82ac2347e9e782c";
+const SCRIPT_GUID = /^\s*m_Script:\s*\{[^}]*\bguid:\s*([0-9a-fA-F]{32})\b[^}]*\}\s*$/;
 const GROUP_NAME = /^m_Name:\s*(.*?)\s*$/;
 const GROUP_GUID = /^m_GUID:\s*([0-9a-fA-F]{32})\s*$/;
 const ENTRY_GUID = /^-\s*m_GUID:\s*([0-9a-fA-F]{32})\s*$/;
@@ -42,13 +45,14 @@ export function extractAddressableGroup(
 ): AddressableGroup | null {
   if (!source.path.toLowerCase().endsWith(".asset")) return null;
   const lines = content.split(/\r?\n/);
-  const markerIndex = lines.findIndex((line) => GROUP_MARKER.test(line));
-  if (markerIndex === -1) return null;
+  const document = findAddressableGroupDocument(lines);
+  if (!document) return null;
+  const { markerIndex, documentStart, documentEnd } = document;
   const groupIndent = GROUP_MARKER.exec(lines[markerIndex]!)![1]!;
 
   let name: string | undefined;
   let groupGuid: string | undefined;
-  for (let i = 0; i < markerIndex; i++) {
+  for (let i = documentStart; i < markerIndex; i++) {
     const field = atIndent(lines[i]!, groupIndent);
     if (field === null) continue;
 
@@ -68,8 +72,39 @@ export function extractAddressableGroup(
     assetGuid: source.assetGuid,
     name,
     path: source.path,
-    entries: parseEntries(lines, markerIndex + 1, groupIndent),
+    entries: parseEntries(lines, markerIndex + 1, groupIndent, documentEnd),
   };
+}
+
+function findAddressableGroupDocument(
+  lines: string[],
+): { markerIndex: number; documentStart: number; documentEnd: number } | null {
+  for (let markerIndex = 0; markerIndex < lines.length; markerIndex++) {
+    if (!GROUP_MARKER.test(lines[markerIndex]!)) continue;
+
+    let documentStart = 0;
+    for (let i = markerIndex - 1; i >= 0; i--) {
+      if (YAML_DOCUMENT.test(lines[i]!)) {
+        documentStart = i;
+        break;
+      }
+    }
+
+    let documentEnd = lines.length;
+    for (let i = markerIndex + 1; i < lines.length; i++) {
+      if (YAML_DOCUMENT.test(lines[i]!)) {
+        documentEnd = i;
+        break;
+      }
+    }
+
+    const hasAddressableGroupScript = lines
+      .slice(documentStart, documentEnd)
+      .some((line) => SCRIPT_GUID.exec(line)?.[1]?.toLowerCase() === ADDRESSABLE_GROUP_SCRIPT_GUID);
+    if (hasAddressableGroupScript) return { markerIndex, documentStart, documentEnd };
+  }
+
+  return null;
 }
 
 function atIndent(line: string, indent: string): string | null {
@@ -78,10 +113,15 @@ function atIndent(line: string, indent: string): string | null {
   return /^\s/.test(remainder) ? null : remainder;
 }
 
-function parseEntries(lines: string[], startIndex: number, groupIndent: string): AddressableGroupEntry[] {
+function parseEntries(
+  lines: string[],
+  startIndex: number,
+  groupIndent: string,
+  documentEnd: number,
+): AddressableGroupEntry[] {
   const entries: AddressableGroupEntry[] = [];
-  let endIndex = lines.length;
-  for (let i = startIndex; i < lines.length; i++) {
+  let endIndex = documentEnd;
+  for (let i = startIndex; i < documentEnd; i++) {
     const field = atIndent(lines[i]!, groupIndent);
     if (field !== null && SIBLING_FIELD.test(field)) {
       endIndex = i;

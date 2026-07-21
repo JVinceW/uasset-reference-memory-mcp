@@ -23,6 +23,7 @@ function addressableGroup(entries: { guid: string; address: string; labels: stri
   const lines = [
     "%YAML 1.1",
     "MonoBehaviour:",
+    "  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}",
     "  m_Name: UI",
     `  m_GUID: ${"e".repeat(32)}`,
     "  m_SerializeEntries:",

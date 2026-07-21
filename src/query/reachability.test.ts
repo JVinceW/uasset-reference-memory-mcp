@@ -30,6 +30,21 @@ function edge(fromGuid: string, toGuid: string): Edge {
 }
 
 describe("findReachableGuids", () => {
+  test("uses an explicitly resolved root and its dependency closure", () => {
+    const store = GraphStore.open(":memory:");
+    store.upsertNodes([
+      node(SCENE, "Assets/Main.unity", "Scene"),
+      node(ADDRESSABLE, "Assets/UI/Profile.prefab", "Prefab"),
+      node(ADDRESSABLE_MATERIAL, "Assets/UI/Profile.mat", "Material"),
+    ]);
+    store.insertEdges([edge(ADDRESSABLE, ADDRESSABLE_MATERIAL)]);
+
+    expect(
+      findReachableGuids(store, { roots: ["Assets/UI/Profile.prefab"], includeAddressables: false }),
+    ).toEqual(new Set([ADDRESSABLE, ADDRESSABLE_MATERIAL]));
+    store.close();
+  });
+
   test("optionally includes Addressable roots and their dependency closure", () => {
     const store = GraphStore.open(":memory:");
     store.upsertNodes([

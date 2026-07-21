@@ -5,10 +5,13 @@ const SOURCE = {
   assetGuid: "f".repeat(32),
   path: "Assets/AddressableAssetsData/AssetGroups/UI.asset",
 };
+const GROUP_SCRIPT =
+  "  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}";
 
 const GROUP = [
   "%YAML 1.1",
   "MonoBehaviour:",
+  GROUP_SCRIPT,
   "  m_Name: UI Remote",
   "  m_GUID: 65CB101CAED9D47F4A691DC0DEA916AE",
   "  m_SerializeEntries:",
@@ -62,9 +65,42 @@ describe("extractAddressableGroup", () => {
     ).toBeNull();
   });
 
+  test("returns null for a different MonoBehaviour script with group-shaped fields", () => {
+    const yaml = [
+      "%YAML 1.1",
+      "--- !u!114 &11400000",
+      "MonoBehaviour:",
+      "  m_Script: {fileID: 11500000, guid: " + "1".repeat(32) + ", type: 3}",
+      "  m_Name: Lookalike",
+      "  m_GUID: " + "a".repeat(32),
+      "  m_SerializeEntries: []",
+    ].join("\n");
+
+    expect(extractAddressableGroup(yaml, SOURCE)).toBeNull();
+  });
+
+  test("does not borrow the Addressable group script identity from another YAML document", () => {
+    const yaml = [
+      "%YAML 1.1",
+      "--- !u!114 &11400000",
+      "MonoBehaviour:",
+      GROUP_SCRIPT,
+      "  m_Name: Real Script, No Entries",
+      "--- !u!114 &11400001",
+      "MonoBehaviour:",
+      "  m_Script: {fileID: 11500000, guid: " + "1".repeat(32) + ", type: 3}",
+      "  m_Name: Lookalike",
+      "  m_GUID: " + "a".repeat(32),
+      "  m_SerializeEntries: []",
+    ].join("\n");
+
+    expect(extractAddressableGroup(yaml, SOURCE)).toBeNull();
+  });
+
   test("parses Unity's serialized labels field", () => {
     const yaml = [
       "MonoBehaviour:",
+      GROUP_SCRIPT,
       "  m_Name: Labeled",
       "  m_GUID: " + "a".repeat(32),
       "  m_SerializeEntries:",
@@ -78,13 +114,19 @@ describe("extractAddressableGroup", () => {
   });
 
   test("preserves an empty group", () => {
-    const yaml = "MonoBehaviour:\n  m_Name: Empty\n  m_GUID: " + "a".repeat(32) + "\n  m_SerializeEntries: []\n";
+    const yaml =
+      "MonoBehaviour:\n" +
+      GROUP_SCRIPT +
+      "\n  m_Name: Empty\n  m_GUID: " +
+      "a".repeat(32) +
+      "\n  m_SerializeEntries: []\n";
     expect(extractAddressableGroup(yaml, SOURCE)?.entries).toEqual([]);
   });
 
   test("does not parse GUID items from a later sibling list", () => {
     const yaml = [
       "MonoBehaviour:",
+      GROUP_SCRIPT,
       "  m_Name: Bounded",
       "  m_GUID: " + "a".repeat(32),
       "  m_SerializeEntries:",
@@ -101,6 +143,7 @@ describe("extractAddressableGroup", () => {
   test("uses group identity at the entries field indentation", () => {
     const yaml = [
       "MonoBehaviour:",
+      GROUP_SCRIPT,
       "  m_Name: Top Level",
       "  m_GUID: " + "a".repeat(32),
       "  m_Nested:",
@@ -116,7 +159,7 @@ describe("extractAddressableGroup", () => {
   });
 
   test("throws a path-aware parse error when marked group YAML lacks identity", () => {
-    expect(() => extractAddressableGroup("m_SerializeEntries: []\n", SOURCE)).toThrow(
+    expect(() => extractAddressableGroup(GROUP_SCRIPT + "\nm_SerializeEntries: []\n", SOURCE)).toThrow(
       /UI\.asset.*missing group name or GUID/,
     );
   });

@@ -75,6 +75,21 @@ function buildStore(): GraphStore {
 }
 
 describe("getAddressableInfo", () => {
+  test("resolves assets directly by GUID and unique name", () => {
+    const store = buildStore();
+    expect(getAddressableInfo(store, PROFILE)).toMatchObject({
+      status: "found",
+      asset: { guid: PROFILE },
+      isAddressable: true,
+    });
+    expect(getAddressableInfo(store, "Local.prefab")).toMatchObject({
+      status: "found",
+      asset: { guid: LOCAL },
+      isAddressable: false,
+    });
+    store.close();
+  });
+
   test("returns metadata, reference counts, and the Addressables-only review signal", () => {
     const store = buildStore();
     expect(getAddressableInfo(store, "ui/profile")).toMatchObject({
@@ -118,6 +133,22 @@ describe("getAddressableInfo", () => {
       status: "ambiguous",
       candidates: [{ guid: DUPLICATE_A }, { guid: DUPLICATE_B }],
     });
+    store.close();
+  });
+
+  test("caps ambiguous candidates at twenty", () => {
+    const store = GraphStore.open(":memory:");
+    const nodes = Array.from({ length: 21 }, (_, index) =>
+      node(guid(100 + index), `Assets/${index.toString().padStart(2, "0")}/Shared.prefab`, "Prefab"),
+    );
+    store.upsertNodes(nodes);
+
+    const result = getAddressableInfo(store, "Shared.prefab");
+    expect(result).toMatchObject({ status: "ambiguous" });
+    expect(result.status === "ambiguous" ? result.candidates : []).toHaveLength(20);
+    expect(result.status === "ambiguous" ? result.candidates.at(-1)?.path : null).toBe(
+      "Assets/19/Shared.prefab",
+    );
     store.close();
   });
 });
