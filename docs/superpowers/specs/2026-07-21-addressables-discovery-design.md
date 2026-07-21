@@ -1,7 +1,7 @@
 # Addressables Discovery Design
 
 Date: 2026-07-21
-Status: Proposed
+Status: Approved
 
 ## Outcome
 
