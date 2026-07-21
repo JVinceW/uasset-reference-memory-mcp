@@ -1,6 +1,6 @@
 # Indexing Behavior
 
-Indexing is a static, offline pass over the Unity project files. Two components
+Indexing is a static, offline pass over the Unity project files. Three components
 feed the graph store:
 
 1. **`meta-scanner`** — walks the project, reads every `.meta`, builds the

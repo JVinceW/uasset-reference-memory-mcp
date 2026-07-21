@@ -16,7 +16,7 @@ Fifteen tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
 | `find_references(asset, depth?)` | Impact analysis: direct or transitive referrers. |
 | `get_edges(from?, to?, kind?, limit?)` | Raw reference-site rows with kind, context, file ID, and count. |
 | `get_dependencies(asset, depth?)` | Forward dependencies. `depth: -1` is full closure. |
-| `find_unused_assets(scope?, roots?)` | Project-origin assets unreachable from configured roots. |
+| `find_unused_assets(scope?, includeScripts?, addressableRoots?)` | Project-origin assets unreachable from scene, Resources, and optionally Addressable roots. |
 | `trace_path(from, to)` | Shortest reference chain. |
 
 ## Exploration
