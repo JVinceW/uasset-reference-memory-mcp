@@ -147,6 +147,17 @@ describe("runTool", () => {
     },
   );
 
+  test.each(["get_addressable_info", "search_addressables", "list_addressable_groups"])(
+    "%s preserves the exact no-index response",
+    async (toolName) => {
+      const missingDbPath = join(dir, `${toolName}-missing.db`);
+      expect(await runTool({ dbPath: missingDbPath }, toolName, { asset: "ui/profile" })).toEqual({
+        error: "no-index",
+        message: `no index at ${missingDbPath} — run index_project first`,
+      });
+    },
+  );
+
   test("read tools error cleanly when no index exists", async () => {
     const r = (await runTool({ dbPath: join(dir, "missing.db") }, "get_overview")) as {
       error: string;

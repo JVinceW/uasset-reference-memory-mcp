@@ -227,7 +227,7 @@ function depthOf(args: Args): number {
 
 function withStore<T>(ctx: ToolCtx, fn: (store: GraphStore) => T): T | { error: string; message: string } {
   if (!existsSync(ctx.dbPath)) {
-    return { error: "no-index", message: `no index at ${ctx.dbPath} — run index_project first` };
+    return noIndexError(ctx);
   }
   const store = GraphStore.open(ctx.dbPath);
   try {
@@ -242,7 +242,7 @@ function withCurrentStore<T>(
   fn: (store: GraphStore) => T,
 ): T | { error: string; message: string; expected?: number; actual?: number | null } {
   if (!existsSync(ctx.dbPath)) {
-    return { error: "no-index", message: `no index at ${ctx.dbPath} â€” run index_project first` };
+    return noIndexError(ctx);
   }
   const actual = GraphStore.readSchemaVersion(ctx.dbPath);
   if (actual !== SCHEMA_VERSION) {
@@ -261,7 +261,7 @@ async function withStoreAsync<T>(
   fn: (store: GraphStore) => Promise<T>,
 ): Promise<T | { error: string; message: string }> {
   if (!existsSync(ctx.dbPath)) {
-    return { error: "no-index", message: `no index at ${ctx.dbPath} — run index_project first` };
+    return noIndexError(ctx);
   }
   const store = GraphStore.open(ctx.dbPath);
   try {
@@ -269,6 +269,10 @@ async function withStoreAsync<T>(
   } finally {
     store.close();
   }
+}
+
+function noIndexError(ctx: ToolCtx): { error: string; message: string } {
+  return { error: "no-index", message: `no index at ${ctx.dbPath} — run index_project first` };
 }
 
 function subgraphSummary(sub: Subgraph | null, asset: unknown): unknown {

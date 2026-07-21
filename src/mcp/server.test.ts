@@ -52,18 +52,40 @@ describe("MCP server", () => {
     );
     expect(names).toHaveLength(15);
 
+    const getAddressableInfo = tools.find((tool) => tool.name === "get_addressable_info");
+    expect(getAddressableInfo?.inputSchema).toMatchObject({
+      type: "object",
+      properties: { asset: { type: "string" } },
+      required: ["asset"],
+    });
+
     const searchAddressables = tools.find((tool) => tool.name === "search_addressables");
     expect(searchAddressables?.inputSchema).toMatchObject({
+      type: "object",
       properties: {
-        query: expect.any(Object),
-        group: expect.any(Object),
-        label: expect.any(Object),
-        pathPrefix: expect.any(Object),
-        type: expect.any(Object),
-        reachableOnlyBecauseAddressable: expect.any(Object),
-        limit: expect.any(Object),
+        query: { type: "string" },
+        group: { type: "string" },
+        label: { type: "string" },
+        pathPrefix: { type: "string" },
+        type: { type: "string" },
+        reachableOnlyBecauseAddressable: { type: "boolean" },
+        limit: { type: "integer", minimum: 1, maximum: 200 },
       },
     });
+    expect(searchAddressables?.inputSchema).not.toHaveProperty("required");
+  });
+
+  test.each([
+    ["get_addressable_info", {}],
+    ["search_addressables", { limit: 0 }],
+    ["search_addressables", { limit: 201 }],
+    ["search_addressables", { limit: 1.5 }],
+  ])("rejects invalid %s arguments at the MCP boundary", async (name, args) => {
+    const result = await client.callTool({ name: name as string, arguments: args });
+    expect(result.isError).toBe(true);
+    expect((result.content as { type: string; text: string }[])[0]!.text).toContain(
+      "Input validation error",
+    );
   });
 
   test("calls get_dependencies and returns JSON content", async () => {
