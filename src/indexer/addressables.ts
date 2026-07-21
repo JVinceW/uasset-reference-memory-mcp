@@ -28,15 +28,16 @@ export class AddressableParseError extends Error {
 /** Temporary entry-only type retained until the indexer consumes groups. */
 export type AddressableEntry = AddressableGroupEntry;
 
-const GROUP_MARKER = /^\s*m_SerializeEntries:\s*(?:\[\])?\s*$/;
-const GROUP_NAME = /^\s*m_Name:\s*(.*?)\s*$/;
-const GROUP_GUID = /^\s*m_GUID:\s*([0-9a-fA-F]{32})\s*$/;
-const ENTRY_GUID = /^\s*-\s*m_GUID:\s*([0-9a-fA-F]{32})\s*$/;
+const GROUP_MARKER = /^(\s*)m_SerializeEntries:\s*(?:\[\])?\s*$/;
+const GROUP_NAME = /^m_Name:\s*(.*?)\s*$/;
+const GROUP_GUID = /^m_GUID:\s*([0-9a-fA-F]{32})\s*$/;
+const ENTRY_GUID = /^-\s*m_GUID:\s*([0-9a-fA-F]{32})\s*$/;
 const ADDRESS = /^\s*m_Address:\s*(.*?)\s*$/;
 const READ_ONLY = /^\s*m_ReadOnly:\s*([01])\s*$/;
 const LABELS = /^\s*m_Labels:\s*(?:\[\])?\s*$/;
 const LABEL = /^\s*-\s*(.*?)\s*$/;
 const ENTRY_FIELD = /^\s*m_[A-Za-z]/;
+const SIBLING_FIELD = /^[^\s-][^:]*:\s*/;
 
 export function extractAddressableGroup(
   content: string,
@@ -45,14 +46,18 @@ export function extractAddressableGroup(
   const lines = content.split(/\r?\n/);
   const markerIndex = lines.findIndex((line) => GROUP_MARKER.test(line));
   if (markerIndex === -1) return null;
+  const groupIndent = GROUP_MARKER.exec(lines[markerIndex]!)![1]!;
 
   let name: string | undefined;
   let groupGuid: string | undefined;
   for (let i = 0; i < markerIndex; i++) {
-    const nameMatch = GROUP_NAME.exec(lines[i]!);
+    const field = atIndent(lines[i]!, groupIndent);
+    if (field === null) continue;
+
+    const nameMatch = GROUP_NAME.exec(field);
     if (nameMatch) name = nameMatch[1]!;
 
-    const guidMatch = GROUP_GUID.exec(lines[i]!);
+    const guidMatch = GROUP_GUID.exec(field);
     if (guidMatch) groupGuid = guidMatch[1]!.toLowerCase();
   }
 
@@ -65,15 +70,30 @@ export function extractAddressableGroup(
     assetGuid: source.assetGuid,
     name,
     path: source.path,
-    entries: parseEntries(lines, markerIndex + 1),
+    entries: parseEntries(lines, markerIndex + 1, groupIndent),
   };
 }
 
-function parseEntries(lines: string[], startIndex: number): AddressableGroupEntry[] {
-  const entries: AddressableGroupEntry[] = [];
+function atIndent(line: string, indent: string): string | null {
+  if (!line.startsWith(indent)) return null;
+  const remainder = line.slice(indent.length);
+  return /^\s/.test(remainder) ? null : remainder;
+}
 
+function parseEntries(lines: string[], startIndex: number, groupIndent: string): AddressableGroupEntry[] {
+  const entries: AddressableGroupEntry[] = [];
+  let endIndex = lines.length;
   for (let i = startIndex; i < lines.length; i++) {
-    const guidMatch = ENTRY_GUID.exec(lines[i]!);
+    const field = atIndent(lines[i]!, groupIndent);
+    if (field !== null && SIBLING_FIELD.test(field)) {
+      endIndex = i;
+      break;
+    }
+  }
+
+  for (let i = startIndex; i < endIndex; i++) {
+    const entryLine = atIndent(lines[i]!, groupIndent);
+    const guidMatch = entryLine === null ? null : ENTRY_GUID.exec(entryLine);
     if (!guidMatch) continue;
 
     const entry: AddressableGroupEntry = {
@@ -85,8 +105,9 @@ function parseEntries(lines: string[], startIndex: number): AddressableGroupEntr
     const seenLabels = new Set<string>();
     let readingLabels = false;
 
-    for (let j = i + 1; j < lines.length; j++) {
-      if (ENTRY_GUID.test(lines[j]!)) break;
+    for (let j = i + 1; j < endIndex; j++) {
+      const nextEntryLine = atIndent(lines[j]!, groupIndent);
+      if (nextEntryLine !== null && ENTRY_GUID.test(nextEntryLine)) break;
 
       const addressMatch = ADDRESS.exec(lines[j]!);
       if (addressMatch) {

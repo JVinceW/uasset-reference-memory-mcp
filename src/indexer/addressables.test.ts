@@ -58,6 +58,39 @@ describe("extractAddressableGroup", () => {
     expect(extractAddressableGroup(yaml, SOURCE)?.entries).toEqual([]);
   });
 
+  test("does not parse GUID items from a later sibling list", () => {
+    const yaml = [
+      "MonoBehaviour:",
+      "  m_Name: Bounded",
+      "  m_GUID: " + "a".repeat(32),
+      "  m_SerializeEntries:",
+      "  - m_GUID: " + "b".repeat(32),
+      "    m_Address: expected",
+      "  m_OtherEntries:",
+      "  - m_GUID: " + "c".repeat(32),
+      "    m_Address: not-addressable",
+    ].join("\n");
+
+    expect(extractAddressableGroup(yaml, SOURCE)?.entries.map((entry) => entry.address)).toEqual(["expected"]);
+  });
+
+  test("uses group identity at the entries field indentation", () => {
+    const yaml = [
+      "MonoBehaviour:",
+      "  m_Name: Top Level",
+      "  m_GUID: " + "a".repeat(32),
+      "  m_Nested:",
+      "    m_Name: Nested",
+      "    m_GUID: " + "b".repeat(32),
+      "  m_SerializeEntries: []",
+    ].join("\n");
+
+    expect(extractAddressableGroup(yaml, SOURCE)).toMatchObject({
+      name: "Top Level",
+      groupGuid: "a".repeat(32),
+    });
+  });
+
   test("throws a path-aware parse error when marked group YAML lacks identity", () => {
     expect(() => extractAddressableGroup("m_SerializeEntries: []\n", SOURCE)).toThrow(
       /UI\.asset.*missing group name or GUID/,
