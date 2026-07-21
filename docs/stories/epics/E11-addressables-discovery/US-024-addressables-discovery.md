@@ -2,7 +2,7 @@
 
 ## Status
 
-in_progress
+implemented
 
 ## Lane
 
@@ -53,7 +53,35 @@ decision 0010.
 
 ## Evidence
 
-- Parser, store, query, MCP, JSON, snapshot, typecheck, and build proof are
-  implemented in Tasks 1-5.
-- Real-project verification is pending Task 6; this story remains
-  `in_progress` until that proof passes.
+- Repository verification on 2026-07-22: `npm test` passed 37 files and 222
+  tests; `npm run typecheck`, `npm run build`, and `git diff --check` exited 0.
+- `npm pack --dry-run` exited 0 with 119 files (550.0 kB packed, 1.4 MB
+  unpacked), including `dist/mcp/server.js`, `dist/mcp/tools.js`,
+  `dist/query/addressables.js`, `README.md`, and `package.json`.
+- Authorized external repository: `E:\Unity\go-royal-client`. Its Unity
+  project root is `E:\Unity\go-royal-client\go-royal-unity` because the
+  authorized monorepo root has no `Assets` directory. The built CLI command
+  `node dist/cli/main.js index "E:\Unity\go-royal-client\go-royal-unity" --force`
+  rebuilt `.asset-memory/index.db` as schema 3 with 15,776 assets, 995 edges,
+  97 unresolved references, and 119 warnings.
+- Live `get_addressable_info` by project path found
+  `Assets/Game.Contents/Resources/RoomFlow/Ugui/Scene04MatchStartWaiting.prefab`
+  (GUID `326a6e4058a64e244acd48c5fa14aecc`) as a non-Addressable Prefab with 0
+  incoming and 120 outgoing references. It returned `isAddressable: false`,
+  `addressable: null`, and `reachableOnlyBecauseAddressable: false`.
+- The same live index contains 0 Addressable groups and 0 entries. Therefore a
+  positive lookup by runtime address was unavailable; the representative input
+  `room-flow/match-start-waiting` returned `not-found`. A group `UI` plus label
+  `remote` search returned 0 entries, the reachable-only search returned 0
+  entries, and `list_addressable_groups` returned 0 groups and consequently 0
+  direct indexed source bytes. This absence agrees with no
+  `m_SerializeEntries:` group YAML and no `com.unity.addressables` package or
+  `AddressableAssetSettings` reference in the authorized Unity project.
+- Live `find_unused_assets` returned the same 184 assets and 40,840,010 bytes
+  with `addressableRoots: auto` and `addressableRoots: off`, as expected when
+  the project has no Addressable roots. Positive address, label, group-byte,
+  and Addressables-only reachability cases remain covered by the repository's
+  automated query and MCP fixtures rather than invented real-project samples.
+- Scope review used `git diff --stat HEAD~5..HEAD`, the required unsafe-claim
+  search, and `git status --short`. The only phrase matches explicitly say the
+  review signal is not evidence that an asset is unused or safe to delete.

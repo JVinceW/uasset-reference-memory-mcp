@@ -10,7 +10,57 @@
 
 ## Status
 
-Active
+Completed
+
+## Progress
+
+- Tasks 1-5 were implemented and reviewed in commits `24150d4` through
+  `c45027f`.
+- Task 6 completed on 2026-07-22 with repository-wide verification, package
+  smoke proof, authorized external indexing, live MCP dispatch checks, scope
+  review, and story/backlog closure.
+
+## Decisions During Execution
+
+- The authorized repository path `E:\Unity\go-royal-client` is a monorepo; the
+  indexer used its actual Unity project root
+  `E:\Unity\go-royal-client\go-royal-unity`, which owns the `Assets`,
+  `Packages`, and `ProjectSettings` directories.
+- The authorized project contains no authored Addressables groups or package
+  reference. Real-project evidence records zero/absence rather than creating a
+  synthetic positive case or modifying Unity content. Positive group, label,
+  runtime-address, source-byte, and reachable-only contracts remain proven by
+  automated fixtures.
+- Only the generated live `.asset-memory/index.db` was rebuilt for external
+  verification. No Unity asset, source, package, or project-setting file was
+  modified.
+
+## Validation
+
+- `npm test`: 37 test files and 222 tests passed.
+- `npm run typecheck`: exited 0.
+- `npm run build`: exited 0 and copied the web public assets.
+- `git diff --check`: exited 0.
+- `npm pack --dry-run`: exited 0 with 119 files and included the built MCP and
+  Addressables query surfaces.
+- Forced external index: schema 3, 15,776 assets, 995 edges, 97 unresolved
+  references, and 119 warnings.
+- Live MCP dispatches: non-Addressable lookup succeeded; runtime-address,
+  group/label, reachable-only, and group-inventory checks returned the observed
+  zero/absence; `find_unused_assets` returned 184 assets / 40,840,010 bytes in
+  both `auto` and `off` modes.
+- Scope and unsafe-claim review found only explicit cautionary uses of `safe to
+  delete`; no claim equates reference absence with deletion safety, source bytes
+  with bundle size, registration with runtime loading, or schema rebuild with a
+  safe in-place migration.
+
+## Result
+
+Addressables authoring metadata is normalized in schema 3, queryable through
+the three bounded MCP tools, preserved in deterministic JSON, and integrated
+with conservative unused-asset reachability. The authorized real project was
+rebuilt and queried successfully; its lack of Addressables content is retained
+as an explicit validation limitation rather than overstated positive evidence.
 
 ## Global Constraints
 
