@@ -40,13 +40,51 @@ afterAll(async () => {
 
 describe("MCP server", () => {
   test("lists the asset-graph tools", async () => {
-    const names = (await client.listTools()).tools.map((t) => t.name);
+    const tools = (await client.listTools()).tools;
+    const names = tools.map((t) => t.name);
     expect(names).toEqual(
       expect.arrayContaining([
         "index_project", "index_status", "get_dependencies", "find_references",
         "trace_path", "find_unused_assets", "search_assets", "get_overview",
         "verify_index",
+        "get_addressable_info", "search_addressables", "list_addressable_groups",
       ]),
+    );
+    expect(names).toHaveLength(15);
+
+    const getAddressableInfo = tools.find((tool) => tool.name === "get_addressable_info");
+    expect(getAddressableInfo?.inputSchema).toMatchObject({
+      type: "object",
+      properties: { asset: { type: "string" } },
+      required: ["asset"],
+    });
+
+    const searchAddressables = tools.find((tool) => tool.name === "search_addressables");
+    expect(searchAddressables?.inputSchema).toMatchObject({
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        group: { type: "string" },
+        label: { type: "string" },
+        pathPrefix: { type: "string" },
+        type: { type: "string" },
+        reachableOnlyBecauseAddressable: { type: "boolean" },
+        limit: { type: "integer", minimum: 1, maximum: 200 },
+      },
+    });
+    expect(searchAddressables?.inputSchema).not.toHaveProperty("required");
+  });
+
+  test.each([
+    ["get_addressable_info", {}],
+    ["search_addressables", { limit: 0 }],
+    ["search_addressables", { limit: 201 }],
+    ["search_addressables", { limit: 1.5 }],
+  ])("rejects invalid %s arguments at the MCP boundary", async (name, args) => {
+    const result = await client.callTool({ name: name as string, arguments: args });
+    expect(result.isError).toBe(true);
+    expect((result.content as { type: string; text: string }[])[0]!.text).toContain(
+      "Input validation error",
     );
   });
 

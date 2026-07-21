@@ -30,7 +30,13 @@ export interface GraphJson {
     count: number;
   }[];
   unresolved: { from: string; toGuid: string; context: string | null }[];
-  addressables: { guid: string; address: string }[];
+  addressables: {
+    guid: string;
+    address: string;
+    readOnly: boolean;
+    group: { guid: string; assetGuid: string; name: string; path: string };
+    labels: string[];
+  }[];
 }
 
 /**
@@ -85,9 +91,37 @@ export function exportGraphJson(db: QueryDb): GraphJson {
       context: (r.context as string | null) ?? null,
     }));
 
+  const labelsByEntry = new Map<string, string[]>();
+  for (const row of db.all(
+    "SELECT entry_guid AS entryGuid, label FROM addressable_entry_labels ORDER BY entry_guid, label",
+  )) {
+    const entryGuid = row.entryGuid as string;
+    const labels = labelsByEntry.get(entryGuid) ?? [];
+    labels.push(row.label as string);
+    labelsByEntry.set(entryGuid, labels);
+  }
+
   const addressables = db
-    .all("SELECT guid, address FROM addressable_entries ORDER BY address, guid")
-    .map((r) => ({ guid: r.guid as string, address: r.address as string }));
+    .all(
+      `SELECT ae.guid, ae.address, ae.read_only AS readOnly,
+              ag.group_guid AS groupGuid, ag.asset_guid AS groupAssetGuid,
+              ag.name AS groupName, ag.path AS groupPath
+       FROM addressable_entries ae
+       JOIN addressable_groups ag ON ag.group_guid = ae.group_guid
+       ORDER BY ae.address, ag.name, ag.path, ae.guid`,
+    )
+    .map((r) => ({
+      guid: r.guid as string,
+      address: r.address as string,
+      readOnly: r.readOnly === 1,
+      group: {
+        guid: r.groupGuid as string,
+        assetGuid: r.groupAssetGuid as string,
+        name: r.groupName as string,
+        path: r.groupPath as string,
+      },
+      labels: labelsByEntry.get(r.guid as string) ?? [],
+    }));
 
   return {
     meta: {

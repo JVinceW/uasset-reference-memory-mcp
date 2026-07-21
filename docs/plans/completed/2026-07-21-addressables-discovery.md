@@ -10,7 +10,58 @@
 
 ## Status
 
-Active
+Completed
+
+## Progress
+
+- Tasks 1-5 were implemented and reviewed in commits `24150d4` through
+  `c45027f`.
+- Task 6 completed on 2026-07-22 with repository-wide verification, package
+  smoke proof, authorized external indexing, live MCP dispatch checks, scope
+  review, and story/backlog closure.
+- Review follow-up added positive real-project proof from the explicitly
+  authorized Addressables-heavy Cricket City project and reconciled every task
+  checkbox with the completed ledger.
+
+## Decisions During Execution
+
+- Use `E:\Unity\cricket-city-unity` for positive Addressables-heavy evidence;
+  retain the earlier Go Royal run only as non-Addressables compatibility proof.
+- Only `.asset` sources are live Addressables groups. Package-cache `.unity`
+  expected-test fixtures may serialize group-shaped YAML with duplicate test
+  GUIDs and must not enter authoring metadata.
+- Recognize both fixture-era `m_Labels` and live Unity
+  `m_SerializedLabels` fields at the same bounded entry-list parser boundary.
+- Only the generated live `.asset-memory/index.db` was rebuilt for external
+  verification. No Unity asset, source, package, or project-setting file was
+  modified.
+
+## Validation
+
+- `npm test`: 37 test files and 224 tests passed.
+- `npm run typecheck`: exited 0.
+- `npm run build`: exited 0 and copied the web public assets.
+- `git diff --check`: exited 0.
+- `npm pack --dry-run`: exited 0 with 119 files and included the built MCP and
+  Addressables query surfaces.
+- Forced Cricket City index: schema 3, 20,834 assets, 8,773 edges, 7,046
+  unresolved references, 95 warnings, 18 groups, and 2,971 entries.
+- Live MCP dispatches proved the same Addressable entry by path and runtime
+  address, a known non-Addressable asset, 6 group+label matches, 18-group
+  inventory with 421,964,942 direct source bytes, 2,707 reachable-only entries,
+  and a 2,697-asset unused delta between `auto` and `off`.
+- Scope and unsafe-claim review found only explicit cautionary uses of `safe to
+  delete`; no claim equates reference absence with deletion safety, source bytes
+  with bundle size, registration with runtime loading, or schema rebuild with a
+  safe in-place migration.
+
+## Result
+
+Addressables authoring metadata is normalized in schema 3, queryable through
+the three bounded MCP tools, preserved in deterministic JSON, and integrated
+with conservative unused-asset reachability. The authorized Addressables-heavy
+Cricket City project rebuilt successfully and supplied positive evidence for
+every required real-project case.
 
 ## Global Constraints
 
@@ -53,7 +104,7 @@ Active
 - Consumes: Unity `AddressableAssetGroup` YAML plus `{ assetGuid, path }` supplied by the indexer.
 - Produces: `AddressableGroup`, `AddressableGroupEntry`, `AddressableParseError`, and `extractAddressableGroup(content, source)`.
 
-- [ ] **Step 1: Replace the entry-only fixture with failing group-shaped parser tests**
+- [x] **Step 1: Replace the entry-only fixture with failing group-shaped parser tests**
 
 Add a fixture containing a group name/GUID, two entries, a read-only flag, labels, and an empty-label entry. Assert the complete public result:
 
@@ -99,13 +150,13 @@ test("throws a path-aware parse error when marked group YAML lacks identity", ()
 });
 ```
 
-- [ ] **Step 2: Run the parser tests and confirm the old interface fails**
+- [x] **Step 2: Run the parser tests and confirm the old interface fails**
 
 Run: `npx vitest run src/indexer/addressables.test.ts`
 
 Expected: FAIL because `extractAddressableGroup` and the group-shaped types do not exist.
 
-- [ ] **Step 3: Implement the group-shaped parser boundary**
+- [x] **Step 3: Implement the group-shaped parser boundary**
 
 Add these public types and function signature while temporarily retaining
 `extractAddressableEntries(content)` as a compatibility wrapper for the existing
@@ -151,19 +202,19 @@ The compatibility wrapper calls the same parser and returns `group?.entries ?? [
 Remove the wrapper in Task 2 after `index-project.ts` consumes the group-shaped
 API.
 
-- [ ] **Step 4: Run the parser tests**
+- [x] **Step 4: Run the parser tests**
 
 Run: `npx vitest run src/indexer/addressables.test.ts`
 
 Expected: PASS for group identity, entries, labels, read-only state, empty group, non-group YAML, and malformed group warning detail.
 
-- [ ] **Step 5: Run type checking**
+- [x] **Step 5: Run type checking**
 
 Run: `npm run typecheck`
 
 Expected: PASS because the compatibility wrapper keeps the current indexer caller valid.
 
-- [ ] **Step 6: Commit the parser contract**
+- [x] **Step 6: Commit the parser contract**
 
 ```powershell
 git add src/indexer/addressables.ts src/indexer/addressables.test.ts
@@ -185,7 +236,7 @@ git commit -m "feat: parse Addressables group metadata"
 - Consumes: `AddressableGroup[]` from Task 1.
 - Produces: `SCHEMA_VERSION = 3`, `GraphStore.readSchemaVersion(path)`, `GraphStore.replaceAddressableGroups(groups)`, `GraphStore.replaceAddressableGroupsForAssets(assetGuids, groups)`, and incremental stale-row cleanup.
 
-- [ ] **Step 1: Write failing schema and transactional replacement tests**
+- [x] **Step 1: Write failing schema and transactional replacement tests**
 
 In `src/store/graph-store.test.ts`, assert all normalized tables and replacement behavior:
 
@@ -230,13 +281,13 @@ test("replacing a deleted group asset removes its membership", () => {
 
 Use local `group()` and `entry()` factories returning the Task 1 interfaces with fixed 32-character GUIDs.
 
-- [ ] **Step 2: Run the store tests and verify failure**
+- [x] **Step 2: Run the store tests and verify failure**
 
 Run: `npx vitest run src/store/graph-store.test.ts`
 
 Expected: FAIL because schema version 3, normalized tables, and replacement methods do not exist.
 
-- [ ] **Step 3: Replace the Addressables schema with normalized tables**
+- [x] **Step 3: Replace the Addressables schema with normalized tables**
 
 Set `SCHEMA_VERSION = 3` and replace the old table with:
 
@@ -268,7 +319,7 @@ CREATE INDEX IF NOT EXISTS idx_addressable_labels_label
   ON addressable_entry_labels(label);
 ```
 
-- [ ] **Step 4: Implement full and scoped transactional replacement**
+- [x] **Step 4: Implement full and scoped transactional replacement**
 
 Add these exact methods to `GraphStore`:
 
@@ -279,7 +330,7 @@ replaceAddressableGroupsForAssets(assetGuids: string[], groups: AddressableGroup
 
 Both methods must run in one transaction. `replaceAddressableGroups` deletes all groups and reinserts the supplied authoritative set. `replaceAddressableGroupsForAssets` first deletes rows from `addressable_groups` whose `asset_guid` is in `assetGuids`, relying on foreign-key cascades, then inserts supplied groups, entries, and labels. Share one private insertion helper so SQL bindings are identical in both paths.
 
-- [ ] **Step 5: Update the indexer and add incremental lifecycle tests**
+- [x] **Step 5: Update the indexer and add incremental lifecycle tests**
 
 Change `extractAll` to return `addressableGroups: AddressableGroup[]`, remove the
 temporary `extractAddressableEntries` compatibility export, and call the parser as:
@@ -308,7 +359,7 @@ store.replaceAddressableGroupsForAssets(
 
 Add integration tests that index a group with two entries, rewrite it with one entry and new labels, then delete the group asset. Each incremental run must leave exactly the current groups, entries, and labels.
 
-- [ ] **Step 6: Make old indexes rebuild on `index_project`**
+- [x] **Step 6: Make old indexes rebuild on `index_project`**
 
 Add a non-mutating static helper:
 
@@ -335,7 +386,7 @@ schema-2-shaped database with `index_meta.schema_version = '2'`, runs
 `indexProject`, and asserts the resulting database reports schema 3 and contains
 current scan data.
 
-- [ ] **Step 7: Run focused storage/indexing tests**
+- [x] **Step 7: Run focused storage/indexing tests**
 
 Run:
 
@@ -345,7 +396,7 @@ npx vitest run src/store/graph-store.test.ts src/indexer/addressables.test.ts sr
 
 Expected: PASS, including changed/deleted group cleanup and schema-2 rebuild.
 
-- [ ] **Step 8: Run the full suite and commit**
+- [x] **Step 8: Run the full suite and commit**
 
 Run: `npm test`
 
@@ -372,7 +423,7 @@ git commit -m "feat: persist normalized Addressables groups"
 - Consumes: schema 3 through `QueryDb`, `resolveRef` from `src/query/traverse.ts`, and asset rows through `rowToNode`.
 - Produces: `findReachableGuids`, `getAddressableInfo`, `searchAddressables`, and `listAddressableGroups`.
 
-- [ ] **Step 1: Write failing reachability tests**
+- [x] **Step 1: Write failing reachability tests**
 
 Create a graph with a Scene-rooted prefab, a `Resources/` asset, an Addressable-only prefab, its material dependency, and an orphan. Assert:
 
@@ -387,13 +438,13 @@ expect(findReachableGuids(store, { includeAddressables: true })).toEqual(
 
 Also retain existing tests proving `find_unused_assets` gives the same results for `addressableRoots: "auto" | "on" | "off"`.
 
-- [ ] **Step 2: Run reachability and unused tests and verify failure**
+- [x] **Step 2: Run reachability and unused tests and verify failure**
 
 Run: `npx vitest run src/query/reachability.test.ts src/query/unused.test.ts`
 
 Expected: FAIL because `findReachableGuids` does not exist.
 
-- [ ] **Step 3: Implement the shared reachability primitive**
+- [x] **Step 3: Implement the shared reachability primitive**
 
 Create:
 
@@ -411,7 +462,7 @@ export function findReachableGuids(
 
 Resolve explicit roots through `resolveRef`. Otherwise select Scene and `Resources/` roots. Conditionally union `addressable_entries.guid`, then use one recursive CTE to return the root and dependency closure. Refactor `findUnusedAssets` to exclude GUIDs from this shared set while preserving project-origin, type, scope, size ordering, and all current options.
 
-- [ ] **Step 4: Write failing Addressables query tests**
+- [x] **Step 4: Write failing Addressables query tests**
 
 Define the expected public types by test usage:
 
@@ -445,13 +496,13 @@ expect(getAddressableInfo(store, "Duplicate.prefab")).toMatchObject({
 
 Add search assertions for free text, partial group, exact label, path prefix, type, and `reachableOnlyBecauseAddressable`. Add group inventory assertions for deterministic name/path ordering, entry count, direct indexed source bytes, and distinct sorted labels. Insert two entries with the same address and assert lookup returns `status: "ambiguous"` with both asset candidates.
 
-- [ ] **Step 5: Run the Addressables query tests and verify failure**
+- [x] **Step 5: Run the Addressables query tests and verify failure**
 
 Run: `npx vitest run src/query/addressables.test.ts`
 
 Expected: FAIL because the module does not exist.
 
-- [ ] **Step 6: Implement the focused query module**
+- [x] **Step 6: Implement the focused query module**
 
 Export these contracts:
 
@@ -484,7 +535,7 @@ export function listAddressableGroups(db: QueryDb): AddressableGroupSummary[];
 
 Resolution precedence is exact GUID, exact path, unique exact name, then exact Addressable address. A duplicate exact address returns `ambiguous`. Sort ambiguity candidates by path and cap them at 20. Search defaults to 200 and clamps `limit` to `1..200`. Compute base reachability once per call and mark an entry `reachableOnlyBecauseAddressable` when its GUID is absent from the non-Addressable root closure.
 
-- [ ] **Step 7: Run focused query tests**
+- [x] **Step 7: Run focused query tests**
 
 Run:
 
@@ -494,7 +545,7 @@ npx vitest run src/query/reachability.test.ts src/query/addressables.test.ts src
 
 Expected: PASS for all lookup, filtering, group inventory, ambiguity, reachability, and legacy unused behavior cases.
 
-- [ ] **Step 8: Commit the shared query layer**
+- [x] **Step 8: Commit the shared query layer**
 
 ```powershell
 git add src/query/reachability.ts src/query/reachability.test.ts src/query/addressables.ts src/query/addressables.test.ts src/query/unused.ts src/query/unused.test.ts
@@ -515,7 +566,7 @@ git commit -m "feat: query Addressables metadata and reachability"
 - Consumes: Task 3 query functions and `SCHEMA_VERSION`.
 - Produces: `get_addressable_info`, `search_addressables`, and `list_addressable_groups` MCP contracts.
 
-- [ ] **Step 1: Add failing MCP registration tests**
+- [x] **Step 1: Add failing MCP registration tests**
 
 Extend the server test to require all three names:
 
@@ -529,7 +580,7 @@ expect(names).toEqual(expect.arrayContaining([
 
 Inspect `search_addressables` from `client.listTools()` and assert its input schema includes `query`, `group`, `label`, `pathPrefix`, `type`, `reachableOnlyBecauseAddressable`, and `limit`.
 
-- [ ] **Step 2: Add failing dispatcher contract tests**
+- [x] **Step 2: Add failing dispatcher contract tests**
 
 Seed Addressables metadata in the existing MCP test store and assert:
 
@@ -562,13 +613,13 @@ Create a database whose metadata says schema 2 and assert each new tool returns:
 }
 ```
 
-- [ ] **Step 3: Run MCP tests and verify failure**
+- [x] **Step 3: Run MCP tests and verify failure**
 
 Run: `npx vitest run src/mcp/server.test.ts src/mcp/tools.test.ts`
 
 Expected: FAIL because the tools and dispatch cases are absent.
 
-- [ ] **Step 4: Register the MCP schemas**
+- [x] **Step 4: Register the MCP schemas**
 
 Add definitions with these input shapes:
 
@@ -598,7 +649,7 @@ Add definitions with these input shapes:
 },
 ```
 
-- [ ] **Step 5: Dispatch through a schema-aware store wrapper**
+- [x] **Step 5: Dispatch through a schema-aware store wrapper**
 
 Add `withCurrentStore` beside `withStore`. It must inspect the stored version
 before calling `GraphStore.open`:
@@ -626,7 +677,7 @@ function withCurrentStore<T>(
 
 Use it only for the three new cases. Return lookup results directly, return the search result directly, and wrap group inventory as `{ total: groups.length, groups }`. Preserve the current `no-index` behavior and all existing tool responses.
 
-- [ ] **Step 6: Run MCP tests and the full suite**
+- [x] **Step 6: Run MCP tests and the full suite**
 
 Run:
 
@@ -638,7 +689,7 @@ npm run typecheck
 
 Expected: all commands PASS; the MCP server lists 15 tools.
 
-- [ ] **Step 7: Commit the MCP surface**
+- [x] **Step 7: Commit the MCP surface**
 
 ```powershell
 git add src/mcp/server.ts src/mcp/server.test.ts src/mcp/tools.ts src/mcp/tools.test.ts
@@ -667,7 +718,7 @@ git commit -m "feat: expose Addressables discovery MCP tools"
 - Consumes: schema 3 and the three MCP contracts.
 - Produces: stable exported Addressables metadata and current product/story/decision documentation.
 
-- [ ] **Step 1: Write failing JSON export assertions**
+- [x] **Step 1: Write failing JSON export assertions**
 
 Update the export fixture to insert one group with two labels and assert:
 
@@ -691,17 +742,17 @@ expect(j.meta.schemaVersion).toBe(3);
 
 Update the snapshot artifact test to expect `schema_version: 3`.
 
-- [ ] **Step 2: Run export/snapshot tests and verify failure**
+- [x] **Step 2: Run export/snapshot tests and verify failure**
 
 Run: `npx vitest run src/snapshot/json-export.test.ts src/snapshot/snapshot.test.ts`
 
 Expected: FAIL because the export still emits `{ guid, address }` and tests expect schema 2.
 
-- [ ] **Step 3: Export normalized metadata deterministically**
+- [x] **Step 3: Export normalized metadata deterministically**
 
 Change `GraphJson.addressables` to include entry state, nested group identity, and labels. Query groups and entries in address/group/path/GUID order and load labels in label order. Do not export group schema or bundle fields. Keep `addressableCount` as the number of entries.
 
-- [ ] **Step 4: Run export, snapshot, and build checks**
+- [x] **Step 4: Run export, snapshot, and build checks**
 
 Run:
 
@@ -713,7 +764,7 @@ npm run build
 
 Expected: PASS, with deterministic JSON and schema 3 artifact metadata.
 
-- [ ] **Step 5: Write the product and decision documentation**
+- [x] **Step 5: Write the product and decision documentation**
 
 Create `docs/product/addressables.md` with:
 
@@ -727,11 +778,11 @@ Create `docs/product/addressables.md` with:
 
 Record decision 0010: normalize authoring metadata in schema 3, rebuild generated indexes rather than migrating them in place, and keep bundle configuration deferred. Update the graph-model tables, indexing lifecycle, MCP tool count/list, overview limitations, and README tool/schema sections.
 
-- [ ] **Step 6: Add story US-024 and backlog status**
+- [x] **Step 6: Add story US-024 and backlog status**
 
 The story acceptance criteria must mirror the approved spec and list proof by parser, store, query, MCP, JSON/snapshot, and real-project layers. Add E11 and US-024 to `docs/stories/backlog.md` with status `implemented` only after Task 6 verification passes; until then use `in_progress`.
 
-- [ ] **Step 7: Check documentation references and commit**
+- [x] **Step 7: Check documentation references and commit**
 
 Run:
 
@@ -761,7 +812,7 @@ git commit -m "docs: publish Addressables discovery contract"
 - Consumes: all prior task commits.
 - Produces: repository-wide proof, real-project evidence, completed story state, and completed plan state.
 
-- [ ] **Step 1: Run the repository verification ladder**
+- [x] **Step 1: Run the repository verification ladder**
 
 Run:
 
@@ -774,7 +825,7 @@ git diff --check
 
 Expected: every command exits 0; all parser, store, query, MCP, export, snapshot, and existing regression tests pass.
 
-- [ ] **Step 2: Build an installable package smoke artifact**
+- [x] **Step 2: Build an installable package smoke artifact**
 
 Run:
 
@@ -784,7 +835,7 @@ npm pack --dry-run
 
 Expected: exit 0; `dist/mcp/server.js`, query implementation, README, and package metadata are present in the dry-run file list.
 
-- [ ] **Step 3: Verify an Addressables-heavy Unity project with explicit authority**
+- [x] **Step 3: Verify an Addressables-heavy Unity project with explicit authority**
 
 Before this step, obtain or confirm authorization for the external Unity project path because indexing writes its `.asset-memory/index.db`. Then run the built indexer with `force` and call the three MCP tools against representative cases:
 
@@ -800,7 +851,7 @@ Before this step, obtain or confirm authorization for the external Unity project
 
 Record the exact project path, command, entry/group samples, counts, and limitations in the US-024 Evidence section. Do not commit the external project's live `index.db` from this repository task.
 
-- [ ] **Step 4: Review the diff for scope and unsafe claims**
+- [x] **Step 4: Review the diff for scope and unsafe claims**
 
 Run:
 
@@ -812,11 +863,11 @@ git status --short
 
 Expected: only approved Stage 1 surfaces changed; documentation does not equate reference absence with deletion safety, source bytes with bundle size, or registration with runtime loading.
 
-- [ ] **Step 5: Mark story and plan complete**
+- [x] **Step 5: Mark story and plan complete**
 
 Change US-024 and the backlog row from `in_progress` to `implemented`. Fill the story Evidence section with fresh command results. Update this plan's progress, validation, decisions, and result; change its status to `Completed`; move it to `docs/plans/completed/`; and add it to `docs/plans/completed/README.md`.
 
-- [ ] **Step 6: Commit completion evidence**
+- [x] **Step 6: Commit completion evidence**
 
 ```powershell
 git add docs/stories/epics/E11-addressables-discovery/US-024-addressables-discovery.md docs/stories/backlog.md docs/plans/completed/README.md

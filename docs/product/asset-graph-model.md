@@ -75,6 +75,42 @@ CREATE TABLE index_meta (
 );
 ```
 
+## Addressables authoring metadata
+
+Schema 3 preserves normalized, read-only Addressables authoring state:
+
+```sql
+CREATE TABLE addressable_groups (
+  group_guid TEXT PRIMARY KEY,  -- Addressables group identity
+  asset_guid TEXT NOT NULL UNIQUE, -- Unity GUID of the group asset
+  name       TEXT NOT NULL,
+  path       TEXT NOT NULL
+);
+
+CREATE TABLE addressable_entries (
+  guid       TEXT PRIMARY KEY,  -- GUID of the addressed asset
+  address    TEXT NOT NULL,
+  group_guid TEXT NOT NULL REFERENCES addressable_groups(group_guid)
+                                   ON DELETE CASCADE,
+  read_only  INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_addressable_entries_address ON addressable_entries(address);
+CREATE INDEX idx_addressable_entries_group ON addressable_entries(group_guid);
+
+CREATE TABLE addressable_entry_labels (
+  entry_guid TEXT NOT NULL REFERENCES addressable_entries(guid)
+                                   ON DELETE CASCADE,
+  label      TEXT NOT NULL,
+  PRIMARY KEY (entry_guid, label)
+);
+CREATE INDEX idx_addressable_labels_label ON addressable_entry_labels(label);
+```
+
+`group_guid` is Addressables identity; `asset_guid` connects the group asset to
+the Unity asset graph without making it a runtime-content dependency. One asset
+has at most one current group membership. Duplicate addresses remain visible.
+These tables do not model group schemas or bundle configuration.
+
 ## Traversal
 
 - **Impact analysis** = reverse lookup on `idx_edges_to`.

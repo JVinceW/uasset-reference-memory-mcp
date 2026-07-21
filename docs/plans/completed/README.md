@@ -6,3 +6,6 @@ architecture decisions.
 
 - `2026-07-21-text-first-harness-migration.md`: removed the legacy local
   SQLite/CLI Harness layer and established the repository-centered workflow.
+- `2026-07-21-addressables-discovery.md`: added schema-3 normalized
+  Addressables discovery, conservative reachability, three MCP tools, and
+  authorized real-project verification.

@@ -87,7 +87,15 @@ describe("findUnusedAssets", () => {
 
   test("addressableRoots treats addressable entries as roots", () => {
     const store = buildStore();
-    store.insertAddressableEntries([{ guid: g("u"), address: "U" }]); // mark U.png addressable
+    store.replaceAddressableGroups([
+      {
+        groupGuid: g("d"),
+        assetGuid: g("e"),
+        name: "UI",
+        path: "Assets/AddressableAssetsData/AssetGroups/UI.asset",
+        entries: [{ guid: g("u"), address: "U", readOnly: false, labels: [] }],
+      },
+    ]); // mark U.png addressable
 
     // off: U.png is still unused (addressables ignored)
     expect(new Set(names(findUnusedAssets(store, { addressableRoots: "off" }))).has("U.png")).toBe(true);

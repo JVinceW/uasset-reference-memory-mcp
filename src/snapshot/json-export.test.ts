@@ -17,7 +17,39 @@ function buildStore(): GraphStore {
   store.upsertNodes([node(g("b"), "Assets/B.prefab"), node(g("a"), "Assets/A.mat")]);
   store.insertEdges([edge(g("b"), g("a"), "m_Materials")]);
   store.insertUnresolved([{ fromGuid: g("b"), toGuid: g("z"), context: "m_Script" }]);
-  store.insertAddressableEntries([{ guid: g("a"), address: "MyMat" }]);
+  store.replaceAddressableGroups([
+    {
+      groupGuid: g("d"),
+      assetGuid: g("f"),
+      name: "UI Remote",
+      path: "Assets/AddressableAssetsData/AssetGroups/UI.asset",
+      entries: [{ guid: g("a"), address: "ui/profile", readOnly: false, labels: ["ui", "remote"] }],
+    },
+    {
+      groupGuid: g("1"),
+      assetGuid: g("4"),
+      name: "Alpha",
+      path: "Assets/AddressableAssetsData/AssetGroups/Z.asset",
+      entries: [
+        { guid: g("e"), address: "shared", readOnly: false, labels: [] },
+        { guid: g("c"), address: "shared", readOnly: true, labels: [] },
+      ],
+    },
+    {
+      groupGuid: g("2"),
+      assetGuid: g("5"),
+      name: "Zed",
+      path: "Assets/AddressableAssetsData/AssetGroups/First.asset",
+      entries: [{ guid: g("0"), address: "a/first", readOnly: false, labels: [] }],
+    },
+    {
+      groupGuid: g("3"),
+      assetGuid: g("6"),
+      name: "Alpha",
+      path: "Assets/AddressableAssetsData/AssetGroups/A.asset",
+      entries: [{ guid: g("b"), address: "shared", readOnly: false, labels: ["z", "a"] }],
+    },
+  ]);
   store.setMeta("indexed_at", "2026-07-08T00:00:00.000Z");
   return store;
 }
@@ -27,12 +59,12 @@ describe("exportGraphJson", () => {
     const store = buildStore();
     const j = exportGraphJson(store);
     expect(j.meta).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       indexedAt: "2026-07-08T00:00:00.000Z",
       assetCount: 2,
       edgeCount: 1,
       unresolvedCount: 1,
-      addressableCount: 1,
+      addressableCount: 5,
     });
     store.close();
   });
@@ -54,11 +86,37 @@ describe("exportGraphJson", () => {
     store.close();
   });
 
-  test("includes unresolved and addressables", () => {
+  test("includes unresolved and orders addressables by address, group, path, and GUID", () => {
     const store = buildStore();
     const j = exportGraphJson(store);
     expect(j.unresolved).toEqual([{ from: "Assets/B.prefab", toGuid: g("z"), context: "m_Script" }]);
-    expect(j.addressables).toEqual([{ guid: g("a"), address: "MyMat" }]);
+    expect(j.addressables.map((entry) => [
+      entry.address,
+      entry.group.name,
+      entry.group.path,
+      entry.guid,
+    ])).toEqual([
+      ["a/first", "Zed", "Assets/AddressableAssetsData/AssetGroups/First.asset", g("0")],
+      ["shared", "Alpha", "Assets/AddressableAssetsData/AssetGroups/A.asset", g("b")],
+      ["shared", "Alpha", "Assets/AddressableAssetsData/AssetGroups/Z.asset", g("c")],
+      ["shared", "Alpha", "Assets/AddressableAssetsData/AssetGroups/Z.asset", g("e")],
+      ["ui/profile", "UI Remote", "Assets/AddressableAssetsData/AssetGroups/UI.asset", g("a")],
+    ]);
+    expect(j.addressables.find((entry) => entry.guid === g("a"))).toEqual(
+      {
+        guid: g("a"),
+        address: "ui/profile",
+        readOnly: false,
+        group: {
+          guid: g("d"),
+          assetGuid: g("f"),
+          name: "UI Remote",
+          path: "Assets/AddressableAssetsData/AssetGroups/UI.asset",
+        },
+        labels: ["remote", "ui"],
+      },
+    );
+    expect(j.addressables.find((entry) => entry.guid === g("b"))?.labels).toEqual(["a", "z"]);
     store.close();
   });
 

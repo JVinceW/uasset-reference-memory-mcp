@@ -3,6 +3,7 @@ import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema.js";
 import { rowToNode, type AssetRow } from "./row.js";
 import type { QueryDb } from "../query/db.js";
 import type { AssetNode, Edge, UnresolvedRef } from "../indexer/types.js";
+import type { AddressableGroup } from "../indexer/addressables.js";
 
 export type { AssetRow } from "./row.js";
 
@@ -33,6 +34,18 @@ export class GraphStore implements QueryDb {
       store.setMeta("schema_version", String(SCHEMA_VERSION));
     }
     return store;
+  }
+
+  static readSchemaVersion(path: string): number | null {
+    const db = new Database(path, { readonly: true, fileMustExist: true });
+    try {
+      const row = db.prepare("SELECT value FROM index_meta WHERE key = 'schema_version'").get() as
+        | { value: string }
+        | undefined;
+      return row ? Number(row.value) : null;
+    } finally {
+      db.close();
+    }
   }
 
   close(): void {
@@ -233,14 +246,51 @@ export class GraphStore implements QueryDb {
 
   // --- addressables ---------------------------------------------------------
 
-  insertAddressableEntries(entries: { guid: string; address: string }[]): void {
-    const stmt = this.db.prepare(
-      "INSERT OR REPLACE INTO addressable_entries (guid, address) VALUES (?, ?)",
-    );
-    const tx = this.db.transaction((items: { guid: string; address: string }[]) => {
-      for (const e of items) stmt.run(e.guid, e.address);
+  private insertAddressableGroups(groups: AddressableGroup[]): void {
+    const insertGroup = this.db.prepare(`
+      INSERT INTO addressable_groups (group_guid, asset_guid, name, path)
+      VALUES (@groupGuid, @assetGuid, @name, @path)`);
+    const insertEntry = this.db.prepare(`
+      INSERT INTO addressable_entries (guid, address, group_guid, read_only)
+      VALUES (@guid, @address, @groupGuid, @readOnly)`);
+    const insertLabel = this.db.prepare(`
+      INSERT INTO addressable_entry_labels (entry_guid, label)
+      VALUES (?, ?)`);
+
+    for (const group of groups) {
+      insertGroup.run({
+        groupGuid: group.groupGuid,
+        assetGuid: group.assetGuid,
+        name: group.name,
+        path: group.path,
+      });
+      for (const entry of group.entries) {
+        insertEntry.run({
+          guid: entry.guid,
+          address: entry.address,
+          groupGuid: group.groupGuid,
+          readOnly: entry.readOnly ? 1 : 0,
+        });
+        for (const label of entry.labels) insertLabel.run(entry.guid, label);
+      }
+    }
+  }
+
+  replaceAddressableGroups(groups: AddressableGroup[]): void {
+    const tx = this.db.transaction((items: AddressableGroup[]) => {
+      this.db.prepare("DELETE FROM addressable_groups").run();
+      this.insertAddressableGroups(items);
     });
-    tx(entries);
+    tx(groups);
+  }
+
+  replaceAddressableGroupsForAssets(assetGuids: string[], groups: AddressableGroup[]): void {
+    const deleteGroup = this.db.prepare("DELETE FROM addressable_groups WHERE asset_guid = ?");
+    const tx = this.db.transaction((guids: string[], items: AddressableGroup[]) => {
+      for (const guid of guids) deleteGroup.run(guid);
+      this.insertAddressableGroups(items);
+    });
+    tx(assetGuids, groups);
   }
 
   addressableCount(): number {

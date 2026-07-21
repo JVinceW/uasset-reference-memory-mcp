@@ -130,7 +130,15 @@ read tools return a clear `no-index` error until you do.
 
 **Tools exposed:** `index_project`, `index_status`, `get_dependencies`,
 `find_references`, `find_unused_assets`, `trace_path`, `search_assets`,
-`get_overview`.
+`get_addressable_info`, `search_addressables`, `list_addressable_groups`,
+`get_overview`, `get_edges`, `verify_index`, `export_graph_json`, and
+`manage_adr`.
+
+The Addressables tools provide read-only entry lookup, filtered discovery, and
+group inventory. `indexedSourceBytes` is source-file size, not built bundle
+size, and `reachableOnlyBecauseAddressable` is a review signal rather than
+deletion safety. See
+[docs/product/addressables.md](docs/product/addressables.md).
 
 ## 3. Web viewer
 
@@ -193,8 +201,15 @@ Optional per-project `.asset-memory/config.json` (see
 
 Open `.asset-memory/index.db` with any SQLite tool. Core tables: `assets`
 (nodes), `edges` (references), `unresolved_refs` (broken refs),
-`addressable_entries`, `index_meta`. Schema:
+`addressable_groups`, `addressable_entries`, `addressable_entry_labels`, and
+`index_meta`. Schema:
 [docs/product/asset-graph-model.md](docs/product/asset-graph-model.md).
+
+Schema 3 normalizes Addressables into `addressable_groups`,
+`addressable_entries`, and `addressable_entry_labels`. JSON exports include
+each entry's read-only state, owning group identity, and sorted labels. Older
+generated indexes and snapshots must be rebuilt with `index_project`; they are
+not migrated in place.
 
 ## Known limitations
 
@@ -202,6 +217,9 @@ Open `.asset-memory/index.db` with any SQLite tool. Core tables: `assets`
   Addressable address strings in C# aren't scanned yet, so `find_unused` output
   is *candidates* — verify against your loading code.
 - **Asset-level granularity**: edges are asset→asset (not per-GameObject/fileID).
+- **Read-only Addressables Stage 1**: group schemas, profiles, providers,
+  packing/compression, build/load paths, content-update settings, and bundle
+  analysis are deferred.
 - Incremental re-index is by mtime; use `--force` for a fully consistent rebuild.
 
 ## Development
