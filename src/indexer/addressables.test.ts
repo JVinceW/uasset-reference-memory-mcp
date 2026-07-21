@@ -53,6 +53,30 @@ describe("extractAddressableGroup", () => {
     expect(extractAddressableGroup("%YAML 1.1\nMaterial:\n", SOURCE)).toBeNull();
   });
 
+  test("returns null for group-shaped package test fixtures that are not asset files", () => {
+    expect(
+      extractAddressableGroup(GROUP, {
+        ...SOURCE,
+        path: "Library/PackageCache/com.unity.addressables/Tests/Expected/Group.unity",
+      }),
+    ).toBeNull();
+  });
+
+  test("parses Unity's serialized labels field", () => {
+    const yaml = [
+      "MonoBehaviour:",
+      "  m_Name: Labeled",
+      "  m_GUID: " + "a".repeat(32),
+      "  m_SerializeEntries:",
+      "  - m_GUID: " + "b".repeat(32),
+      "    m_Address: labeled",
+      "    m_SerializedLabels:",
+      "    - preload",
+    ].join("\n");
+
+    expect(extractAddressableGroup(yaml, SOURCE)?.entries[0]?.labels).toEqual(["preload"]);
+  });
+
   test("preserves an empty group", () => {
     const yaml = "MonoBehaviour:\n  m_Name: Empty\n  m_GUID: " + "a".repeat(32) + "\n  m_SerializeEntries: []\n";
     expect(extractAddressableGroup(yaml, SOURCE)?.entries).toEqual([]);

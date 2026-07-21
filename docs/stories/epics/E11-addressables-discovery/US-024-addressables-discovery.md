@@ -53,35 +53,50 @@ decision 0010.
 
 ## Evidence
 
-- Repository verification on 2026-07-22: `npm test` passed 37 files and 222
+- Repository verification on 2026-07-22: `npm test` passed 37 files and 224
   tests; `npm run typecheck`, `npm run build`, and `git diff --check` exited 0.
 - `npm pack --dry-run` exited 0 with 119 files (550.0 kB packed, 1.4 MB
   unpacked), including `dist/mcp/server.js`, `dist/mcp/tools.js`,
   `dist/query/addressables.js`, `README.md`, and `package.json`.
-- Authorized external repository: `E:\Unity\go-royal-client`. Its Unity
-  project root is `E:\Unity\go-royal-client\go-royal-unity` because the
-  authorized monorepo root has no `Assets` directory. The built CLI command
-  `node dist/cli/main.js index "E:\Unity\go-royal-client\go-royal-unity" --force`
-  rebuilt `.asset-memory/index.db` as schema 3 with 15,776 assets, 995 edges,
-  97 unresolved references, and 119 warnings.
-- Live `get_addressable_info` by project path found
-  `Assets/Game.Contents/Resources/RoomFlow/Ugui/Scene04MatchStartWaiting.prefab`
-  (GUID `326a6e4058a64e244acd48c5fa14aecc`) as a non-Addressable Prefab with 0
-  incoming and 120 outgoing references. It returned `isAddressable: false`,
-  `addressable: null`, and `reachableOnlyBecauseAddressable: false`.
-- The same live index contains 0 Addressable groups and 0 entries. Therefore a
-  positive lookup by runtime address was unavailable; the representative input
-  `room-flow/match-start-waiting` returned `not-found`. A group `UI` plus label
-  `remote` search returned 0 entries, the reachable-only search returned 0
-  entries, and `list_addressable_groups` returned 0 groups and consequently 0
-  direct indexed source bytes. This absence agrees with no
-  `m_SerializeEntries:` group YAML and no `com.unity.addressables` package or
-  `AddressableAssetSettings` reference in the authorized Unity project.
-- Live `find_unused_assets` returned the same 184 assets and 40,840,010 bytes
-  with `addressableRoots: auto` and `addressableRoots: off`, as expected when
-  the project has no Addressable roots. Positive address, label, group-byte,
-  and Addressables-only reachability cases remain covered by the repository's
-  automated query and MCP fixtures rather than invented real-project samples.
+- Authorized Addressables-heavy project: `E:\Unity\cricket-city-unity`. Before
+  indexing, its generated `.asset-memory/index.db` was 12,726,272 bytes with a
+  2026-07-21 14:29:11 +09:00 timestamp. The built CLI command
+  `node dist/cli/main.js index "E:\Unity\cricket-city-unity" --force` rebuilt
+  it as schema 3 with 20,834 assets, 8,773 edges, 7,046 unresolved references,
+  and 95 warnings.
+- The first real-project rebuild exposed three package-cache `.unity` expected
+  fixtures reusing one test group GUID and live `m_SerializedLabels` fields.
+  Two red-first parser regressions now restrict live groups to `.asset` sources
+  and accept both label field spellings; focused parser/indexer tests passed
+  15/15 before the successful rebuild.
+- `get_addressable_info` resolved
+  `Assets/Game.Cricket.MainGame/Contents/MasterData/DT_CardDataTable.asset` and
+  runtime address `DT_CardDataTable` to the same GUID
+  `0a5e0603d17b64e51ba8ccfc32dc54b6` in group
+  `cricket-city.master-data`, with 0 incoming / 1 outgoing reference and
+  `reachableOnlyBecauseAddressable: true`.
+- The same tool found
+  `Assets/AddressableAssetsData/AddressableAssetSettings.asset` as a known
+  non-Addressable ScriptableObject with `addressable: null`, 19 incoming / 23
+  outgoing references, and `reachableOnlyBecauseAddressable: false`.
+- `search_addressables` with group `Default Local Group` and label `bgm`
+  returned 6 AudioClip entries, not truncated; the first was
+  `Assets/lobby.contents/sounds/bgm/BGM_feature_blockgame.ogg`.
+- `list_addressable_groups` returned 18 deterministic groups and 421,964,942
+  aggregate direct indexed source bytes. Samples include `cricket-city.main-game`
+  (5 entries / 271,041 bytes), `Default Local Group` (46 entries / 9,757,507
+  bytes / labels `bgm`, `sfx`), and empty `ui.theme.xmas` (0 / 0).
+- The reachable-only filter returned total 2,707 (truncated at the requested
+  limit 5), including `DT_CardDataTable` and
+  `DA_PenguMapProfileDataAsset.asset`.
+- `find_unused_assets` returned 562 assets / 64,679,613 bytes with
+  `addressableRoots: auto` and 3,259 assets / 496,360,208 bytes with `off`—a
+  conservative-root delta of 2,697 assets / 431,680,595 bytes.
+- After verification, external status changed only the authorized generated
+  `.asset-memory/index.db` (13,348,864 bytes, SHA-256
+  `1CEB40B4637110CFE88728D2A9C2B375B6AB0C5C1A9D34684D67583D38B0E493`);
+  no Unity asset, source, package, or project-setting file changed. The dirty
+  `YGG_Package` submodule state was present in the baseline and was untouched.
 - Scope review used `git diff --stat HEAD~5..HEAD`, the required unsafe-claim
   search, and `git status --short`. The only phrase matches explicitly say the
   review signal is not evidence that an asset is unused or safe to delete.

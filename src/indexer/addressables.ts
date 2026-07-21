@@ -31,7 +31,7 @@ const GROUP_GUID = /^m_GUID:\s*([0-9a-fA-F]{32})\s*$/;
 const ENTRY_GUID = /^-\s*m_GUID:\s*([0-9a-fA-F]{32})\s*$/;
 const ADDRESS = /^\s*m_Address:\s*(.*?)\s*$/;
 const READ_ONLY = /^\s*m_ReadOnly:\s*([01])\s*$/;
-const LABELS = /^\s*m_Labels:\s*(?:\[\])?\s*$/;
+const LABELS = /^\s*m_(?:Serialized)?Labels:\s*(?:\[\])?\s*$/;
 const LABEL = /^\s*-\s*(.*?)\s*$/;
 const ENTRY_FIELD = /^\s*m_[A-Za-z]/;
 const SIBLING_FIELD = /^[^\s-][^:]*:\s*/;
@@ -40,6 +40,7 @@ export function extractAddressableGroup(
   content: string,
   source: AddressableGroupSource,
 ): AddressableGroup | null {
+  if (!source.path.toLowerCase().endsWith(".asset")) return null;
   const lines = content.split(/\r?\n/);
   const markerIndex = lines.findIndex((line) => GROUP_MARKER.test(line));
   if (markerIndex === -1) return null;
