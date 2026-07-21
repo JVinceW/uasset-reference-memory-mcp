@@ -64,6 +64,21 @@ describe("GraphStore schema", () => {
 });
 
 describe("GraphStore Addressables replacement", () => {
+  test("persists only explicitly supplied Addressables groups", () => {
+    const store = GraphStore.open(":memory:");
+    store.replaceAddressableGroups([group("UI", [entry("a", [])])]);
+    expect(store.db.prepare("SELECT group_guid, asset_guid, name, path FROM addressable_groups").all()).toEqual([
+      {
+        group_guid: "e".repeat(32),
+        asset_guid: "f".repeat(32),
+        name: "UI",
+        path: "Assets/AddressableAssetsData/AssetGroups/UI.asset",
+      },
+    ]);
+    expect("insertAddressableEntries" in store).toBe(false);
+    store.close();
+  });
+
   test("replacing a changed group removes stale entries and labels", () => {
     const store = GraphStore.open(":memory:");
     store.replaceAddressableGroups([group("UI", [entry("a", ["old"]), entry("b", [])])]);

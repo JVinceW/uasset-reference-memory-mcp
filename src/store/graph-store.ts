@@ -293,21 +293,6 @@ export class GraphStore implements QueryDb {
     tx(assetGuids, groups);
   }
 
-  insertAddressableEntries(entries: { guid: string; address: string }[]): void {
-    const groupGuid = "__legacy_addressable_entries__";
-    const ensureGroup = this.db.prepare(`
-      INSERT OR IGNORE INTO addressable_groups (group_guid, asset_guid, name, path)
-      VALUES (?, ?, ?, ?)`);
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO addressable_entries (guid, address, group_guid, read_only)
-      VALUES (?, ?, ?, 0)`);
-    const tx = this.db.transaction((items: { guid: string; address: string }[]) => {
-      ensureGroup.run(groupGuid, groupGuid, "Legacy", "");
-      for (const e of items) stmt.run(e.guid, e.address, groupGuid);
-    });
-    tx(entries);
-  }
-
   addressableCount(): number {
     return (this.db.prepare("SELECT COUNT(*) AS n FROM addressable_entries").get() as { n: number })
       .n;

@@ -17,7 +17,15 @@ function buildStore(): GraphStore {
   store.upsertNodes([node(g("b"), "Assets/B.prefab"), node(g("a"), "Assets/A.mat")]);
   store.insertEdges([edge(g("b"), g("a"), "m_Materials")]);
   store.insertUnresolved([{ fromGuid: g("b"), toGuid: g("z"), context: "m_Script" }]);
-  store.insertAddressableEntries([{ guid: g("a"), address: "MyMat" }]);
+  store.replaceAddressableGroups([
+    {
+      groupGuid: g("c"),
+      assetGuid: g("d"),
+      name: "Materials",
+      path: "Assets/AddressableAssetsData/AssetGroups/Materials.asset",
+      entries: [{ guid: g("a"), address: "MyMat", readOnly: false, labels: [] }],
+    },
+  ]);
   store.setMeta("indexed_at", "2026-07-08T00:00:00.000Z");
   return store;
 }
