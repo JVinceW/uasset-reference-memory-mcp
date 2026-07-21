@@ -9,6 +9,9 @@ feed the graph store:
 2. **`ref-extractor`** — scans each text-serialized asset for `guid:` references,
    capturing the surrounding `fileID` and the YAML property name as `context`,
    and emits edges. GUIDs that resolve to no known node become `unresolved_refs`.
+3. **Addressables group parser** — recognizes `AddressableAssetGroup` YAML and
+   records group identity, group asset identity/path, entries, addresses,
+   read-only flags, and labels. Non-group YAML produces no Addressables rows.
 
 ## Scan Scope
 
@@ -39,6 +42,13 @@ suffixes and are regenerated, so path is informational for packages.
 
 Default `index_project` is incremental: re-parse only files whose `mtime` differs
 from the stored value. `force: true` rebuilds from scratch.
+
+Addressables membership is authoritative generated state. Full indexing
+replaces all groups, entries, and labels. Incremental indexing replaces the
+rows owned by changed group assets and removes stale membership when a group is
+deleted or stops being a group. Foreign-key cascades remove dependent entries
+and labels. A schema mismatch requires `index_project` to rebuild schema 3;
+generated indexes are not migrated in place.
 
 ## Error Handling
 

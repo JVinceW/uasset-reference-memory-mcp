@@ -19,11 +19,11 @@ function buildStore(): GraphStore {
   store.insertUnresolved([{ fromGuid: g("b"), toGuid: g("z"), context: "m_Script" }]);
   store.replaceAddressableGroups([
     {
-      groupGuid: g("c"),
-      assetGuid: g("d"),
-      name: "Materials",
-      path: "Assets/AddressableAssetsData/AssetGroups/Materials.asset",
-      entries: [{ guid: g("a"), address: "MyMat", readOnly: false, labels: [] }],
+      groupGuid: g("d"),
+      assetGuid: g("f"),
+      name: "UI Remote",
+      path: "Assets/AddressableAssetsData/AssetGroups/UI.asset",
+      entries: [{ guid: g("a"), address: "ui/profile", readOnly: false, labels: ["ui", "remote"] }],
     },
   ]);
   store.setMeta("indexed_at", "2026-07-08T00:00:00.000Z");
@@ -66,7 +66,20 @@ describe("exportGraphJson", () => {
     const store = buildStore();
     const j = exportGraphJson(store);
     expect(j.unresolved).toEqual([{ from: "Assets/B.prefab", toGuid: g("z"), context: "m_Script" }]);
-    expect(j.addressables).toEqual([{ guid: g("a"), address: "MyMat" }]);
+    expect(j.addressables).toEqual([
+      {
+        guid: g("a"),
+        address: "ui/profile",
+        readOnly: false,
+        group: {
+          guid: g("d"),
+          assetGuid: g("f"),
+          name: "UI Remote",
+          path: "Assets/AddressableAssetsData/AssetGroups/UI.asset",
+        },
+        labels: ["remote", "ui"],
+      },
+    ]);
     store.close();
   });
 

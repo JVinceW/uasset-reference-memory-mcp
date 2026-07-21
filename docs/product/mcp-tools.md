@@ -1,6 +1,6 @@
 # MCP Tool Contract
 
-Twelve tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
+Fifteen tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
 
 ## Indexing
 
@@ -24,6 +24,9 @@ Twelve tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
 | Tool | Behavior |
 | --- | --- |
 | `search_assets(name?, type?, pathPrefix?, origin?, minRefs?, maxRefs?)` | Structured node search and reference-count filters. |
+| `get_addressable_info(asset)` | Resolve one asset or Addressables address and report membership, group, labels, references, and reachability. |
+| `search_addressables(query?, group?, label?, pathPrefix?, type?, reachableOnlyBecauseAddressable?, limit?)` | Filter Addressable entries with deterministic bounded results, totals, and truncation. |
+| `list_addressable_groups()` | Group inventory with entry counts, distinct labels, and indexed source bytes (not bundle bytes). |
 | `get_overview()` | Counts, hubs, broken references, package usage, and largest folders. |
 | `export_graph_json(out?)` | Writes a stable, git-diffable JSON export of the graph. |
 | `manage_adr(action, ...)` | Manages Markdown ADRs under `.asset-memory/adrs/`. |
@@ -38,3 +41,6 @@ Twelve tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
 
 There is no raw-SQL MCP tool in v1. External tools can open the SQLite file
 directly; agents receive the curated graph surface.
+
+The full Addressables response and safety contract is documented in
+[`addressables.md`](addressables.md).

@@ -15,6 +15,8 @@ Full design detail: `docs/superpowers/specs/2026-07-07-asset-memory-mcp-design.m
 4. **Explore / understand** — trace dependency chains, get an architectural view.
 5. **Reusable index artifact** — the index is a plain, documented SQLite file
    any future external tool can consume directly, independent of the MCP server.
+6. **Addressables discovery** — inspect normalized entry, group, label, and
+   reachability metadata through read-only MCP tools.
 
 ## Non-Goals (v1)
 
@@ -25,6 +27,9 @@ Full design detail: `docs/superpowers/specs/2026-07-07-asset-memory-mcp-design.m
   the `file_id` column reserves the upgrade path.
 - No Cypher / graph query language. Plain SQL over documented tables + curated
   MCP tools.
+- No Addressables configuration editing or bundle prediction. Group schemas,
+  profiles, providers, packing, compression, build/load paths, content-update
+  settings, and bundle output analysis are deferred.
 
 ## Feasibility Premise
 
@@ -37,6 +42,11 @@ YAML and `.meta`. No tree-sitter, no LSP.
 **Hard requirement:** the Unity project must use text serialization (Asset
 Serialization: Force Text). Binary serialization is detected and rejected with a
 clear message.
+
+Addressables are optional. Projects without them retain the complete general
+asset graph and query surface. `reachableOnlyBecauseAddressable` is a review
+signal, not evidence that an asset is unused or safe to delete; dynamic
+string-based loading remains outside the static graph.
 
 ## Relationship to codebase-memory-mcp
 

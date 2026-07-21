@@ -13,6 +13,12 @@ product contract lives in `docs/product/`.
 | E03 | Verification: Unity exporter plus `verify_index` diff | implemented |
 | E04 | Local web graph viewer: Node server and static WASM flavors | implemented |
 
+## In-Progress Epics
+
+| Epic | Description | Status |
+| --- | --- | --- |
+| E11 | Read-only normalized Addressables discovery and migration review | in_progress |
+
 ## Story Packets
 
 | Story | Title | Lane | Status |
@@ -40,8 +46,8 @@ product contract lives in `docs/product/`.
 | US-021 | ADR management | normal | implemented |
 | US-022 | CI/CD | normal | implemented |
 | US-023 | Unity exporter and GUID-pair index verification | normal | implemented |
+| US-024 | Addressables discovery | normal | in_progress |
 
 ## Next Work
 
-No selected product epic remains. Add new candidates here only after a fresh
-feature intake creates a current product contract and story packet.
+E11 remains selected until Task 6 completes real-project verification.
