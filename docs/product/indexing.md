@@ -35,8 +35,8 @@ suffixes and are regenerated, so path is informational for packages.
 - `search_assets` / `get_overview` accept an `origin` filter; overview includes a
   per-package inbound-reference summary. A package with zero inbound edges from
   `origin='project'` assets is a removal candidate.
-- `index_status` flags when `Packages/packages-lock.json` is newer than the
-  index (package versions may have shifted).
+- `index_status` returns the lockfile timestamp recorded by the last successful
+  index. It does not read the current lockfile or prove live project freshness.
 
 ## Incremental Re-Index
 
@@ -60,8 +60,8 @@ generated indexes are not migrated in place.
 Indexing is best-effort, never all-or-nothing.
 
 - **Unparseable YAML** → record the node (its `.meta` still parses), skip edge
-  extraction, add to the warnings list returned by `index_project` and shown in
-  `index_status`.
+  extraction, and add it to the warnings returned by that `index_project` run.
+  Warnings are not replayed by `index_status`.
 - **Binary serialization detected** (expected-text file lacks the `%YAML`
   header) → fail loudly: "this project uses binary serialization; switch Asset
   Serialization to Force Text." Do not produce a silently-empty graph.
@@ -69,7 +69,8 @@ Indexing is best-effort, never all-or-nothing.
   logical asset. Follow Unity's identity workflow: never invent, copy,
   regenerate, or silently repair a GUID.
 - **Unresolvable GUID refs** → `unresolved_refs` table; never an error.
-- **Stale index** → queries answer from what is indexed; `index_status` reports
-  staleness. Inform, never auto-reindex (manual-trigger philosophy).
+- **Stale index** → queries answer from what is indexed. `index_status` exposes
+  recorded metadata but does not establish freshness. Agents refresh explicitly;
+  query tools never auto-reindex.
 - **Interrupted indexing** → build into a temp DB / transaction and atomically
   swap on success; a killed run never corrupts the previous good index.

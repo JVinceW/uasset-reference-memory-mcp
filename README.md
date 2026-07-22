@@ -140,6 +140,13 @@ size, and `reachableOnlyBecauseAddressable` is a review signal rather than
 deletion safety. See
 [docs/product/addressables.md](docs/product/addressables.md).
 
+**Agent refresh policy:** before the first graph-dependent operation when
+freshness is unknown, call `index_project` once in incremental mode. Reuse that
+index for subsequent read-only queries, then refresh once after each coherent
+batch of asset/`.meta` changes. Use `force: true` only when guaranteed freshness
+is required. `index_status` reports stored index metadata; it does not scan live
+assets or prove freshness, and query tools never trigger hidden indexing.
+
 ## 3. Web viewer
 
 ```bash

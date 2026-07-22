@@ -7,7 +7,7 @@ Fifteen tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
 | Tool | Behavior |
 | --- | --- |
 | `index_project(path, force?)` | Full scan and DB build. Default incremental mode re-parses only changed files. |
-| `index_status()` | Index location, counts, and last-indexed time. |
+| `index_status()` | Stored index location, counts, and last-indexed time. Informational only; it does not scan live assets or prove freshness. |
 
 ## Core Queries
 
@@ -44,3 +44,24 @@ directly; agents receive the curated graph surface.
 
 The full Addressables response and safety contract is documented in
 [`addressables.md`](addressables.md).
+
+## Agent Refresh Policy
+
+- When freshness has not been established in the current task/session, call
+  `index_project` once before the first graph-dependent query.
+- Reuse the successful index across subsequent read-only queries while no asset
+  state changes.
+- After a coherent batch of asset or `.meta` changes, call incremental
+  `index_project` once before further graph-dependent work.
+- Use `force: true` for an explicit guaranteed-freshness request,
+  timestamp-preserving synchronization, restored backups/archives, or visible
+  disagreement between Unity and the incremental graph.
+- Do not auto-loop on incomplete-pair warnings. Wait for Unity or source control
+  to stabilize, then retry.
+- Stop on `DuplicateGuidError` and require the conflicting `.meta` files to be
+  repaired before retrying.
+
+Query tools are read-only and never invoke `index_project` implicitly. There is
+no background watcher. `index_status` is useful for existence, schema, counts,
+and recorded time, but its stored metadata is not a live-filesystem freshness
+check.
