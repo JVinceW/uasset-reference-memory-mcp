@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile, rm, readdir, utimes } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm, readdir, rename, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -92,6 +92,145 @@ describe("indexProject fresh build", () => {
 });
 
 describe("indexProject incremental", () => {
+  test("reconciles a moved guid as one update and preserves incoming references", async () => {
+    const sourceGuid = "a".repeat(32);
+    const targetGuid = "b".repeat(32);
+    const originalPath = "Assets/Original/Target.prefab";
+    const movedPath = "Assets/Moved/Target.prefab";
+    await writeAsset(originalPath, targetGuid);
+    await writeAsset(
+      "Assets/Source.prefab",
+      sourceGuid,
+      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${targetGuid}, type: 3}\n`,
+    );
+    await indexProject(root, { dbPath });
+
+    await mkdir(join(root, "Assets/Moved"), { recursive: true });
+    await rename(join(root, originalPath), join(root, movedPath));
+    await rename(join(root, `${originalPath}.meta`), join(root, `${movedPath}.meta`));
+
+    const summary = await indexProject(root, { dbPath });
+    expect(summary).toMatchObject({ added: 0, updated: 1, removed: 0 });
+
+    const store = GraphStore.open(dbPath);
+    expect(store.getNode(targetGuid)?.path).toBe(movedPath);
+    expect(store.incomingEdges(targetGuid)).toHaveLength(1);
+    store.close();
+  });
+
+  test("reports a guid replacement and leaves references to the old guid unresolved", async () => {
+    const sourceGuid = "a".repeat(32);
+    const oldGuid = "b".repeat(32);
+    const newGuid = "c".repeat(32);
+    const targetPath = "Assets/Target.prefab";
+    await writeAsset(targetPath, oldGuid);
+    await writeAsset(
+      "Assets/Source.prefab",
+      sourceGuid,
+      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${oldGuid}, type: 3}\n`,
+    );
+    await indexProject(root, { dbPath });
+
+    await writeFile(join(root, `${targetPath}.meta`), meta(newGuid));
+
+    const summary = await indexProject(root, { dbPath });
+    expect(summary).toMatchObject({ added: 1, updated: 0, removed: 1 });
+    expect(summary.warnings).toContainEqual({
+      kind: "guid-replaced",
+      path: targetPath,
+      message: `asset guid replaced at ${targetPath}: ${oldGuid} -> ${newGuid}`,
+    });
+
+    const store = GraphStore.open(dbPath);
+    expect(store.getNode(oldGuid)).toBeNull();
+    expect(store.getNode(newGuid)?.path).toBe(targetPath);
+    expect(store.incomingEdges(oldGuid)).toHaveLength(0);
+    expect(
+      store.db
+        .prepare("SELECT from_guid, to_guid FROM unresolved_refs WHERE to_guid = ?")
+        .all(oldGuid),
+    ).toEqual([{ from_guid: sourceGuid, to_guid: oldGuid }]);
+    store.close();
+  });
+
+  test("counts a moved guid and a new guid at its former path independently", async () => {
+    const movedGuid = "a".repeat(32);
+    const newGuid = "b".repeat(32);
+    const formerPath = "Assets/Original.prefab";
+    const movedPath = "Assets/Moved.prefab";
+    await writeAsset(formerPath, movedGuid);
+    await indexProject(root, { dbPath });
+
+    await rename(join(root, formerPath), join(root, movedPath));
+    await rename(join(root, `${formerPath}.meta`), join(root, `${movedPath}.meta`));
+    await writeAsset(formerPath, newGuid);
+
+    const summary = await indexProject(root, { dbPath });
+    expect(summary).toMatchObject({ added: 1, updated: 1, removed: 0 });
+
+    const store = GraphStore.open(dbPath);
+    expect(store.getNode(movedGuid)?.path).toBe(movedPath);
+    expect(store.getNode(newGuid)?.path).toBe(formerPath);
+    store.close();
+  });
+
+  test("counts a path swap between stable guids as two updates", async () => {
+    const firstGuid = "a".repeat(32);
+    const secondGuid = "b".repeat(32);
+    const firstPath = "Assets/First.prefab";
+    const secondPath = "Assets/Second.prefab";
+    const tempPath = "Assets/Swap.tmp";
+    await writeAsset(firstPath, firstGuid);
+    await writeAsset(secondPath, secondGuid);
+    await indexProject(root, { dbPath });
+
+    await rename(join(root, firstPath), join(root, tempPath));
+    await rename(join(root, `${firstPath}.meta`), join(root, `${tempPath}.meta`));
+    await rename(join(root, secondPath), join(root, firstPath));
+    await rename(join(root, `${secondPath}.meta`), join(root, `${firstPath}.meta`));
+    await rename(join(root, tempPath), join(root, secondPath));
+    await rename(join(root, `${tempPath}.meta`), join(root, `${secondPath}.meta`));
+
+    const summary = await indexProject(root, { dbPath });
+    expect(summary).toMatchObject({ added: 0, updated: 2, removed: 0 });
+
+    const store = GraphStore.open(dbPath);
+    expect(store.getNode(firstGuid)?.path).toBe(secondPath);
+    expect(store.getNode(secondGuid)?.path).toBe(firstPath);
+    store.close();
+  });
+
+  test("refreshes a moved Addressables group path and retains its entries", async () => {
+    const groupGuid = "f".repeat(32);
+    const entryGuid = "a".repeat(32);
+    const originalPath = "Assets/AddressableAssetsData/AssetGroups/UI.asset";
+    const movedPath = "Assets/AddressableAssetsData/AssetGroups/Moved/UI.asset";
+    await writeAsset(
+      originalPath,
+      groupGuid,
+      addressableGroup([{ guid: entryGuid, address: "ui/main", labels: ["ui"] }]),
+    );
+    await indexProject(root, { dbPath });
+
+    await mkdir(join(root, "Assets/AddressableAssetsData/AssetGroups/Moved"), {
+      recursive: true,
+    });
+    await rename(join(root, originalPath), join(root, movedPath));
+    await rename(join(root, `${originalPath}.meta`), join(root, `${movedPath}.meta`));
+
+    const summary = await indexProject(root, { dbPath });
+    expect(summary).toMatchObject({ added: 0, updated: 1, removed: 0 });
+
+    const store = GraphStore.open(dbPath);
+    expect(
+      store.db.prepare("SELECT asset_guid, path FROM addressable_groups").all(),
+    ).toEqual([{ asset_guid: groupGuid, path: movedPath }]);
+    expect(
+      store.db.prepare("SELECT guid, address FROM addressable_entries").all(),
+    ).toEqual([{ guid: entryGuid, address: "ui/main" }]);
+    store.close();
+  });
+
   test("reports added, updated, removed, unchanged", async () => {
     await writeAsset("Assets/A.prefab", "a".repeat(32));
     await writeAsset("Assets/B.prefab", "b".repeat(32));

@@ -142,24 +142,40 @@ async function applyIncremental(
   resolve: Resolver,
   warnings: ScanWarning[],
 ): Promise<ChangeCounts> {
-  const prior = store.getNodeMtimes();
-  const currentPaths = new Set<string>();
+  const priorByPath = store.getNodeMtimes();
+  const priorByGuid = new Map<string, { path: string; mtime: number }>();
+  for (const [path, info] of priorByPath) {
+    priorByGuid.set(info.guid, { path, mtime: info.mtime });
+  }
+  const currentByGuid = new Map(nodes.map((node) => [node.guid, node]));
   const addedNodes: AssetNode[] = [];
   const updatedNodes: AssetNode[] = [];
   let unchanged = 0;
 
   for (const n of nodes) {
-    currentPaths.add(n.path);
-    const p = prior.get(n.path);
+    const p = priorByGuid.get(n.guid);
     if (!p) addedNodes.push(n);
-    else if (p.mtime !== n.mtime) updatedNodes.push(n);
+    else if (p.path !== n.path || p.mtime !== n.mtime) updatedNodes.push(n);
     else unchanged++;
   }
 
   const builtinGuids = new Set(BUILTIN_NODES.map((n) => n.guid));
   const removedGuids: string[] = [];
-  for (const [path, info] of prior) {
-    if (!currentPaths.has(path) && !builtinGuids.has(info.guid)) removedGuids.push(info.guid);
+  for (const guid of priorByGuid.keys()) {
+    if (!currentByGuid.has(guid) && !builtinGuids.has(guid)) removedGuids.push(guid);
+  }
+
+  const addedByPath = new Map(addedNodes.map((node) => [node.path, node]));
+  for (const oldGuid of removedGuids) {
+    const path = priorByGuid.get(oldGuid)!.path;
+    const replacement = addedByPath.get(path);
+    if (replacement) {
+      warnings.push({
+        kind: "guid-replaced",
+        path,
+        message: `asset guid replaced at ${path}: ${oldGuid} -> ${replacement.guid}`,
+      });
+    }
   }
 
   // Nodes: upsert changed, then handle removals (demote inbound, drop node).
