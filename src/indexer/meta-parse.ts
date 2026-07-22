@@ -12,7 +12,7 @@ const FOLDER_ASSET_LINE = /^folderAsset:\s*yes\s*$/;
 export function parseGuid(metaContent: string): string | null {
   for (const line of metaContent.split("\n")) {
     const match = GUID_LINE.exec(line);
-    if (match) return match[1]!;
+    if (match) return match[1]!.toLowerCase();
   }
   return null;
 }

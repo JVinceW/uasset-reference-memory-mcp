@@ -13,6 +13,16 @@ describe("parseGuid", () => {
     expect(parseGuid(meta)).toBe("8f2a1c0d4e5b6a7c8d9e0f1a2b3c4d5e");
   });
 
+  test("returns uppercase hex guid letters in canonical lowercase", () => {
+    const meta = [
+      "fileFormatVersion: 2",
+      "guid: ABCDEF0123456789ABCDEF0123456789",
+      "PrefabImporter:",
+    ].join("\n");
+
+    expect(parseGuid(meta)).toBe("abcdef0123456789abcdef0123456789");
+  });
+
   test("returns null when no guid line exists", () => {
     expect(parseGuid("fileFormatVersion: 2\n")).toBeNull();
   });

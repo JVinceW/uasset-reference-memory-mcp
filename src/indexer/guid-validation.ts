@@ -19,9 +19,10 @@ export function assertUniqueAssetGuids(
 ): void {
   const pathsByGuid = new Map<string, string[]>();
   for (const node of [...reserved, ...nodes]) {
-    const paths = pathsByGuid.get(node.guid) ?? [];
+    const guid = node.guid.toLowerCase();
+    const paths = pathsByGuid.get(guid) ?? [];
     paths.push(node.path);
-    pathsByGuid.set(node.guid, paths);
+    pathsByGuid.set(guid, paths);
   }
 
   const collisions = [...pathsByGuid]

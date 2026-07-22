@@ -33,6 +33,22 @@ describe("assertUniqueAssetGuids", () => {
     }));
   });
 
+  test("reports case-variant duplicates with a canonical guid and sorted paths", () => {
+    const uppercase = "ABCDEF0123456789ABCDEF0123456789";
+    const canonical = uppercase.toLowerCase();
+
+    expect(() => assertUniqueAssetGuids([
+      node(uppercase, "Assets/Z.prefab"),
+      node(canonical, "Assets/A.prefab"),
+    ])).toThrowError(expect.objectContaining({
+      name: "DuplicateGuidError",
+      collisions: [{
+        guid: canonical,
+        paths: ["Assets/A.prefab", "Assets/Z.prefab"],
+      }],
+    }));
+  });
+
   test("reports multiple collisions in ascending GUID order", () => {
     const a = "a".repeat(32);
     const b = "b".repeat(32);

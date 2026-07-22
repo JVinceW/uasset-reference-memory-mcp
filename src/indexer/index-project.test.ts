@@ -89,6 +89,29 @@ describe("indexProject fresh build", () => {
     const leftovers = (await readdir(root)).filter((f) => f.includes("building"));
     expect(leftovers).toEqual([]);
   });
+
+  test("resolves a lowercase serialized reference to an uppercase meta guid", async () => {
+    const sourceGuid = "1".repeat(32);
+    const uppercaseTargetGuid = "ABCDEF0123456789ABCDEF0123456789";
+    const targetGuid = uppercaseTargetGuid.toLowerCase();
+    await writeAsset("Assets/Target.prefab", uppercaseTargetGuid);
+    await writeAsset(
+      "Assets/Source.prefab",
+      sourceGuid,
+      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${targetGuid}, type: 3}\n`,
+    );
+
+    await indexProject(root, { dbPath });
+
+    const store = GraphStore.open(dbPath);
+    try {
+      expect(store.getNode(targetGuid)?.path).toBe("Assets/Target.prefab");
+      expect(store.incomingEdges(targetGuid)).toHaveLength(1);
+      expect(store.unresolvedCount()).toBe(0);
+    } finally {
+      store.close();
+    }
+  });
 });
 
 describe("indexProject incremental", () => {
