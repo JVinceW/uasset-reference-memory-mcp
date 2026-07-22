@@ -77,6 +77,6 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Define explicit handling for duplicate GUIDs in the current scan.
+- Duplicate current GUID handling is resolved by decision 0015.
 - Include replacement ordering, warning proof, and compound move/add/remove
   cases in the combined `0.3.1` implementation plan.
