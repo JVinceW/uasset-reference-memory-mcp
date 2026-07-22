@@ -16,8 +16,8 @@ interface ToolDef {
 }
 
 const TOOLS: ToolDef[] = [
-  { name: "index_project", description: "Build/refresh the asset index for a Unity project.", schema: { path: z.string().optional(), force: z.boolean().optional() } },
-  { name: "index_status", description: "Index location, counts, and last-indexed time.", schema: {} },
+  { name: "index_project", description: "Explicitly refresh the asset index. Default is incremental; force=true rebuilds for guaranteed freshness.", schema: { path: z.string().optional(), force: z.boolean().optional() } },
+  { name: "index_status", description: "Stored index location, counts, and last-indexed time; does not scan live assets or prove freshness.", schema: {} },
   { name: "verify_index", description: "Compare a Unity verify.json export against the index and write the full report beside the database.", schema: { verifyJsonPath: z.string().describe("path to the Unity verify.json export") } },
   { name: "get_dependencies", description: "Everything an asset depends on (forward).", schema: { asset, depth } },
   { name: "find_references", description: "Everything that references an asset (impact analysis).", schema: { asset, depth } },

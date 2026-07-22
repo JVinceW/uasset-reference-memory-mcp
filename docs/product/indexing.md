@@ -41,12 +41,24 @@ suffixes and are regenerated, so path is informational for packages.
 ## Incremental Re-Index
 
 Default `index_project` is incremental: re-parse only files whose observed
-modification time differs from the stored value. Filesystem tools that preserve
-timestamps can evade this fast path. `force: true` is the
+modification time differs from the stored value. Each asset and its sibling
+`.meta` remain one logical row; the stored effective timestamp is the newer of
+the asset and `.meta` timestamps, so an ordinary change to either file is
+eligible for reprocessing. Filesystem tools that preserve both timestamps can
+evade this fast path. `force: true` is the
 guaranteed-freshness option: it ignores the prior incremental state, reads all
 graph-relevant assets, and rebuilds the generated database from current project
 contents. The guarantee covers the completed scan; concurrent writes and
 reported parse/read warnings can still require another run.
+
+Incremental reconciliation is GUID-first, matching Unity's move and rename
+workflow. A known GUID discovered at a new path is one updated asset: its path
+and path-derived metadata are refreshed, incoming references remain attached,
+and its outgoing references and Addressables group data are re-extracted. If a
+path instead contains a globally new GUID while its prior GUID is absent, the
+result is one removal plus one addition and a `guid-replaced` warning. This
+keeps references to the absent GUID unresolved rather than silently retargeting
+them.
 
 Addressables membership is authoritative generated state. Full indexing
 replaces all groups, entries, and labels. Incremental indexing replaces the
@@ -57,7 +69,8 @@ generated indexes are not migrated in place.
 
 ## Error Handling
 
-Indexing is best-effort, never all-or-nothing.
+Indexing continues past recoverable per-file problems, but stops when a safe,
+unambiguous graph cannot be published.
 
 - **Unparseable YAML** → record the node (its `.meta` still parses), skip edge
   extraction, and add it to the warnings returned by that `index_project` run.
@@ -66,8 +79,14 @@ Indexing is best-effort, never all-or-nothing.
   header) → fail loudly: "this project uses binary serialization; switch Asset
   Serialization to Force Text." Do not produce a silently-empty graph.
 - **Missing, orphan, or invalid `.meta`** → warn and skip the incomplete
-  logical asset. Follow Unity's identity workflow: never invent, copy,
-  regenerate, or silently repair a GUID.
+  logical asset. If its GUID was previously indexed and is now absent from the
+  complete scan, remove that node and leave incoming GUID references unresolved;
+  a later complete pair restores the node and promotes those references. Follow
+  Unity's identity workflow: never invent, copy, regenerate, or silently repair
+  a GUID.
+- **Duplicate GUIDs** → fail with `DuplicateGuidError` before publishing any
+  changes, in normal or force mode. Repair the conflicting `.meta` files through
+  Unity or source control, then retry.
 - **Unresolvable GUID refs** → `unresolved_refs` table; never an error.
 - **Stale index** → queries answer from what is indexed. `index_status` exposes
   recorded metadata but does not establish freshness. Agents refresh explicitly;

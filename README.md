@@ -140,6 +140,15 @@ size, and `reachableOnlyBecauseAddressable` is a review signal rather than
 deletion safety. See
 [docs/product/addressables.md](docs/product/addressables.md).
 
+Indexing follows Unity's identity model: an asset and its sibling `.meta` are
+one logical row, the GUID is stable identity, and the path is mutable. A normal
+incremental refresh observes the newer asset/`.meta` modification time and
+treats a GUID at a new path as one update. A new GUID at an old path is reported
+as removal plus addition with a `guid-replaced` warning. Missing, orphaned, or
+invalid `.meta` state is warned and skipped until Unity or source control
+restores a complete pair; duplicate GUIDs stop the refresh without replacing
+the last good index.
+
 **Agent refresh policy:** before the first graph-dependent operation when
 freshness is unknown, call `index_project` once in incremental mode. Reuse that
 index for subsequent read-only queries, then refresh once after each coherent
@@ -229,7 +238,8 @@ not migrated in place.
   analysis are deferred.
 - Incremental re-index uses filesystem modification times for speed and can
   miss timestamp-preserving edits. Use `--force` for a guaranteed-freshness
-  rebuild from current readable project contents.
+  rebuild from current readable project contents; it still reports unreadable
+  or incomplete project state rather than modifying Unity assets.
 
 ## Development
 

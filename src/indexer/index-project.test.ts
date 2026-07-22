@@ -92,6 +92,25 @@ describe("indexProject fresh build", () => {
 });
 
 describe("indexProject incremental", () => {
+  test("counts a meta-only change as one updated logical asset", async () => {
+    const guid = "a".repeat(32);
+    const assetPath = "Assets/A.prefab";
+    await writeAsset(assetPath, guid);
+    await indexProject(root, { dbPath });
+
+    const future = new Date(Date.now() + 60_000);
+    await utimes(join(root, `${assetPath}.meta`), future, future);
+
+    const summary = await indexProject(root, { dbPath });
+    expect(summary).toMatchObject({ added: 0, updated: 1, removed: 0 });
+
+    const store = GraphStore.open(dbPath);
+    expect(
+      store.db.prepare("SELECT COUNT(*) AS count FROM assets WHERE guid = ?").get(guid),
+    ).toEqual({ count: 1 });
+    store.close();
+  });
+
   test("reconciles a moved guid as one update and preserves incoming references", async () => {
     const sourceGuid = "a".repeat(32);
     const targetGuid = "b".repeat(32);
@@ -264,6 +283,122 @@ describe("indexProject incremental", () => {
     const summary = await indexProject(root, { dbPath, force: true });
     expect(summary.added).toBe(2);
     expect(summary.unchanged).toBe(0);
+  });
+
+  test("force refreshes equal-length content changes with preserved timestamps", async () => {
+    const sourceGuid = "a".repeat(32);
+    const firstTargetGuid = "b".repeat(32);
+    const secondTargetGuid = "c".repeat(32);
+    const sourcePath = "Assets/Source.prefab";
+    const referenceBody = (guid: string) =>
+      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${guid}, type: 3}\n`;
+    await writeAsset(sourcePath, sourceGuid, referenceBody(firstTargetGuid));
+    await writeAsset("Assets/First.prefab", firstTargetGuid);
+    await writeAsset("Assets/Second.prefab", secondTargetGuid);
+    const preserved = new Date(Date.now() - 60_000);
+    await utimes(join(root, sourcePath), preserved, preserved);
+    await utimes(join(root, `${sourcePath}.meta`), preserved, preserved);
+    await indexProject(root, { dbPath });
+
+    await writeFile(join(root, sourcePath), referenceBody(secondTargetGuid));
+    await utimes(join(root, sourcePath), preserved, preserved);
+    await utimes(join(root, `${sourcePath}.meta`), preserved, preserved);
+
+    const incremental = await indexProject(root, { dbPath });
+    expect(incremental).toMatchObject({ added: 0, updated: 0, removed: 0 });
+    let store = GraphStore.open(dbPath);
+    expect(store.outgoingEdges(sourceGuid).map((edge) => edge.toGuid)).toEqual([
+      firstTargetGuid,
+    ]);
+    store.close();
+
+    await indexProject(root, { dbPath, force: true });
+    store = GraphStore.open(dbPath);
+    expect(store.outgoingEdges(sourceGuid).map((edge) => edge.toGuid)).toEqual([
+      secondTargetGuid,
+    ]);
+    store.close();
+  });
+
+  test("removes a target with a missing meta and restores its unresolved edge", async () => {
+    const sourceGuid = "a".repeat(32);
+    const targetGuid = "b".repeat(32);
+    const targetPath = "Assets/Target.prefab";
+    await writeAsset(targetPath, targetGuid);
+    await writeAsset(
+      "Assets/Source.prefab",
+      sourceGuid,
+      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${targetGuid}, type: 3}\n`,
+    );
+    await indexProject(root, { dbPath });
+
+    await rm(join(root, `${targetPath}.meta`));
+    const incomplete = await indexProject(root, { dbPath });
+    expect(incomplete).toMatchObject({ added: 0, removed: 1 });
+    expect(incomplete.warnings).toContainEqual({
+      kind: "missing-meta",
+      path: targetPath,
+      message: `asset has no .meta: ${targetPath}`,
+    });
+
+    let store = GraphStore.open(dbPath);
+    expect(store.getNode(targetGuid)).toBeNull();
+    expect(store.incomingEdges(targetGuid)).toEqual([]);
+    expect(
+      store.db
+        .prepare("SELECT from_guid, to_guid FROM unresolved_refs WHERE to_guid = ?")
+        .all(targetGuid),
+    ).toEqual([{ from_guid: sourceGuid, to_guid: targetGuid }]);
+    store.close();
+
+    await writeFile(join(root, `${targetPath}.meta`), meta(targetGuid));
+    const restored = await indexProject(root, { dbPath });
+    expect(restored).toMatchObject({ added: 1, removed: 0 });
+    store = GraphStore.open(dbPath);
+    expect(store.getNode(targetGuid)?.path).toBe(targetPath);
+    expect(store.incomingEdges(targetGuid)).toHaveLength(1);
+    expect(store.unresolvedCount()).toBe(0);
+    store.close();
+  });
+
+  test("warns and removes an indexed target when only its orphan meta remains", async () => {
+    const targetGuid = "b".repeat(32);
+    const targetPath = "Assets/Target.prefab";
+    await writeAsset(targetPath, targetGuid);
+    await indexProject(root, { dbPath });
+
+    await rm(join(root, targetPath));
+    const summary = await indexProject(root, { dbPath });
+
+    expect(summary).toMatchObject({ removed: 1 });
+    expect(summary.warnings).toContainEqual({
+      kind: "orphan-meta",
+      path: targetPath,
+      message: `.meta has no matching asset: ${targetPath}`,
+    });
+    const store = GraphStore.open(dbPath);
+    expect(store.getNode(targetGuid)).toBeNull();
+    store.close();
+  });
+
+  test("warns and removes an indexed target whose meta no longer has a valid guid", async () => {
+    const targetGuid = "b".repeat(32);
+    const targetPath = "Assets/Target.prefab";
+    await writeAsset(targetPath, targetGuid);
+    await indexProject(root, { dbPath });
+
+    await writeFile(join(root, `${targetPath}.meta`), "fileFormatVersion: 2\nPrefabImporter:\n");
+    const summary = await indexProject(root, { dbPath });
+
+    expect(summary).toMatchObject({ removed: 1 });
+    expect(summary.warnings).toContainEqual({
+      kind: "invalid-meta",
+      path: targetPath,
+      message: `.meta has no parseable guid: ${targetPath}.meta`,
+    });
+    const store = GraphStore.open(dbPath);
+    expect(store.getNode(targetGuid)).toBeNull();
+    store.close();
   });
 
   test("keeps changed and deleted Addressables group state authoritative", async () => {
