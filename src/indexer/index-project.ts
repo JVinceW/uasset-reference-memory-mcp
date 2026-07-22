@@ -4,6 +4,7 @@ import { GraphStore } from "../store/graph-store.js";
 import { scanProject, buildIgnore } from "./meta-scanner.js";
 import { loadConfig, configPathFor } from "../config/project-config.js";
 import { BUILTIN_NODES } from "./builtins.js";
+import { assertUniqueAssetGuids } from "./guid-validation.js";
 import { readSerializationMode } from "./project-settings.js";
 import { extractReferences, kindFor, type Resolver } from "./ref-extractor.js";
 import {
@@ -73,6 +74,7 @@ export async function indexProject(
     }
     const config = loadConfig(configPathFor(dbPath));
     const result = await scan(projectRoot, buildIgnore(config.scan));
+    assertUniqueAssetGuids(result.nodes, BUILTIN_NODES);
     // Built-in sentinel guids resolve against synthetic nodes so references to
     // them are edges, not broken refs (US-004). They are stored as infrastructure
     // but excluded from the user-facing change counts.

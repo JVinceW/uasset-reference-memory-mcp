@@ -4,7 +4,9 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import Database from "better-sqlite3";
 import { indexProject } from "./index-project.js";
+import { DuplicateGuidError } from "./guid-validation.js";
 import { GraphStore } from "../store/graph-store.js";
+import type { AssetNode } from "./types.js";
 
 function meta(guid: string): string {
   return `fileFormatVersion: 2\nguid: ${guid}\nPrefabImporter:\n  externalObjects: {}\n`;
@@ -17,6 +19,20 @@ async function writeAsset(rel: string, guid: string, body = "%YAML 1.1\n"): Prom
   await mkdir(join(root, rel, ".."), { recursive: true });
   await writeFile(join(root, rel), body);
   await writeFile(join(root, rel + ".meta"), meta(guid));
+}
+
+function scannedNode(guid: string, path: string): AssetNode {
+  return {
+    guid,
+    path,
+    name: path.split("/").at(-1) ?? path,
+    assetType: "Other",
+    origin: "project",
+    packageId: null,
+    fileSize: 1,
+    mtime: 0,
+    isBinary: false,
+  };
 }
 
 function addressableGroup(entries: { guid: string; address: string; labels: string[] }[]): string {
@@ -192,6 +208,29 @@ describe("indexProject atomicity", () => {
 
     const store = GraphStore.open(dbPath);
     expect(store.assetCount()).toBe(3); // 1 asset + 2 builtin nodes
+    store.close();
+  });
+
+  test("a duplicate scanned GUID leaves the prior index intact", async () => {
+    const validGuid = "a".repeat(32);
+    const duplicateGuid = "d".repeat(32);
+    await writeAsset("Assets/Valid.prefab", validGuid);
+    await indexProject(root, { dbPath });
+
+    await expect(indexProject(root, {
+      dbPath,
+      scan: async () => ({
+        nodes: [
+          scannedNode(duplicateGuid, "Assets/First.prefab"),
+          scannedNode(duplicateGuid, "Assets/Second.prefab"),
+        ],
+        warnings: [],
+      }),
+    })).rejects.toBeInstanceOf(DuplicateGuidError);
+
+    const store = GraphStore.open(dbPath);
+    expect(store.assetCount()).toBe(3); // valid asset + 2 builtin nodes
+    expect(store.getNode(validGuid)?.path).toBe("Assets/Valid.prefab");
     store.close();
   });
 });
