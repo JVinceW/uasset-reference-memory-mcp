@@ -220,7 +220,9 @@ not migrated in place.
 - **Read-only Addressables Stage 1**: group schemas, profiles, providers,
   packing/compression, build/load paths, content-update settings, and bundle
   analysis are deferred.
-- Incremental re-index is by mtime; use `--force` for a fully consistent rebuild.
+- Incremental re-index uses filesystem modification times for speed and can
+  miss timestamp-preserving edits. Use `--force` for a guaranteed-freshness
+  rebuild from current readable project contents.
 
 ## Development
 

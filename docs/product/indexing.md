@@ -40,8 +40,13 @@ suffixes and are regenerated, so path is informational for packages.
 
 ## Incremental Re-Index
 
-Default `index_project` is incremental: re-parse only files whose `mtime` differs
-from the stored value. `force: true` rebuilds from scratch.
+Default `index_project` is incremental: re-parse only files whose observed
+modification time differs from the stored value. Filesystem tools that preserve
+timestamps can evade this fast path. `force: true` is the
+guaranteed-freshness option: it ignores the prior incremental state, reads all
+graph-relevant assets, and rebuilds the generated database from current project
+contents. The guarantee covers the completed scan; concurrent writes and
+reported parse/read warnings can still require another run.
 
 Addressables membership is authoritative generated state. Full indexing
 replaces all groups, entries, and labels. Incremental indexing replaces the

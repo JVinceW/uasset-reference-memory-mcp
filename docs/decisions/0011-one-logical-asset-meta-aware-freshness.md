@@ -60,5 +60,5 @@ Tradeoffs:
 
 - Handle asset moves/renames by GUID in a separate decision and plan.
 - Define explicit incremental semantics for manual GUID replacement separately.
-- Consider content fingerprints only if real timestamp-preservation failures
-  justify the additional cost.
+- Guaranteed freshness for timestamp-preserving changes is resolved by decision
+  0016; content fingerprints remain deferred.
