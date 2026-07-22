@@ -62,7 +62,9 @@ export async function indexProject(
   await cleanupDbFiles(tempPath);
   const hasCurrentIndex = !opts.force && (await fileExists(dbPath));
   const incremental =
-    hasCurrentIndex && GraphStore.readSchemaVersion(dbPath) === SCHEMA_VERSION;
+    hasCurrentIndex &&
+    GraphStore.readSchemaVersion(dbPath) === SCHEMA_VERSION &&
+    !GraphStore.hasNonCanonicalAssetGuids(dbPath);
   if (incremental) await copyFile(dbPath, tempPath);
 
   const store = GraphStore.open(tempPath);

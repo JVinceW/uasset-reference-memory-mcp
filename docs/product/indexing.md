@@ -65,7 +65,13 @@ replaces all groups, entries, and labels. Incremental indexing replaces the
 rows owned by changed group assets and removes stale membership when a group is
 deleted or stops being a group. Foreign-key cascades remove dependent entries
 and labels. A schema mismatch requires `index_project` to rebuild schema 3;
-generated indexes are not migrated in place.
+generated indexes are not migrated in place. A pre-canonical schema-3 index
+whose `assets` table contains uppercase GUID identity also receives a one-time
+automatic fresh rebuild. The old database is detected read-only and is never
+rewritten in place; current project files rebuild every GUID-bearing graph and
+Addressables row, and the replacement is published only after the rebuild
+succeeds. Its summary uses normal fresh-build counts and does not report those
+canonicalization changes as `guid-replaced` assets.
 
 ## Error Handling
 
