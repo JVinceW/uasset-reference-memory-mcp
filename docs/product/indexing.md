@@ -65,7 +65,9 @@ Indexing is best-effort, never all-or-nothing.
 - **Binary serialization detected** (expected-text file lacks the `%YAML`
   header) → fail loudly: "this project uses binary serialization; switch Asset
   Serialization to Force Text." Do not produce a silently-empty graph.
-- **Missing `.meta` / orphan `.meta`** → warnings list (project hygiene signal).
+- **Missing, orphan, or invalid `.meta`** → warn and skip the incomplete
+  logical asset. Follow Unity's identity workflow: never invent, copy,
+  regenerate, or silently repair a GUID.
 - **Unresolvable GUID refs** → `unresolved_refs` table; never an error.
 - **Stale index** → queries answer from what is indexed; `index_status` reports
   staleness. Inform, never auto-reindex (manual-trigger philosophy).
