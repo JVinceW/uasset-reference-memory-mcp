@@ -74,8 +74,7 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Decide how an occupied path with a different GUID is classified before the
-  combined `0.3.1` implementation plan is finalized.
+- Occupied-path GUID replacement is resolved by decision 0014.
 - Define explicit handling for duplicate current GUIDs; they are not eligible
   for move inference because the destination is ambiguous.
 - Consider an optional Unity callback journal only if scan performance data
