@@ -117,7 +117,9 @@ async function buildNode(
   isDir: boolean,
   warnings: ScanWarning[],
 ): Promise<AssetNode | null> {
-  const metaContent = await readFile(join(projectRoot, relPath + META_SUFFIX), "utf8");
+  const assetPath = join(projectRoot, relPath);
+  const metaPath = `${assetPath}${META_SUFFIX}`;
+  const metaContent = await readFile(metaPath, "utf8");
   const guid = parseGuid(metaContent);
   if (!guid) {
     warnings.push({
@@ -128,7 +130,7 @@ async function buildNode(
     return null;
   }
 
-  const info = await stat(join(projectRoot, relPath));
+  const [info, metaInfo] = await Promise.all([stat(assetPath), stat(metaPath)]);
   const importerType = isDir ? "folder" : parseImporterType(metaContent);
   const name = relPath.slice(relPath.lastIndexOf("/") + 1);
 
@@ -140,7 +142,7 @@ async function buildNode(
     origin: classifyOrigin(relPath),
     packageId: parsePackageId(relPath),
     fileSize: isDir ? null : info.size,
-    mtime: Math.floor(info.mtimeMs),
+    mtime: Math.max(Math.floor(info.mtimeMs), Math.floor(metaInfo.mtimeMs)),
     isBinary: isDir ? true : !isYamlAsset(relPath),
   };
 }
