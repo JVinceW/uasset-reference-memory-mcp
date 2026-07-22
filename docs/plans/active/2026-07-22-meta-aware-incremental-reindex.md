@@ -8,6 +8,8 @@
 
 **Tech Stack:** TypeScript 5.7, Node.js filesystem promises, SQLite via better-sqlite3, Vitest 2.1.
 
+**Release Target:** `0.3.1` patch release.
+
 Date: 2026-07-22
 
 ## Status
@@ -233,6 +235,8 @@ Use `git status --short` afterward. Expected: no tracked implementation drift.
 
 - 2026-07-22: Keep one logical asset row and use the newer asset/`.meta` mtime.
 - 2026-07-22: Preserve schema 3; defer moves, GUID reconciliation, hashes, and watchers.
+- 2026-07-22: Target `0.3.1` because this plan is a backward-compatible
+  correctness fix with no new public tools or schema changes.
 
 ## Validation
 

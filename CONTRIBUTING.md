@@ -59,6 +59,22 @@ git checkout -b feat/E10-json-snapshot
   new** (skips otherwise).
 
 ### Releasing
+
+Select the next version from the changes since the latest published tag using
+Semantic Versioning (`MAJOR.MINOR.PATCH`):
+
+| Change | Version bump | Example |
+| --- | --- | --- |
+| Backward-compatible bug fixes only; no new public tools or schema changes | PATCH | `0.3.0` -> `0.3.1` |
+| New backward-compatible capability, public MCP tool, or additive schema behavior | MINOR | `0.3.1` -> `0.4.0` |
+| Breaking public API or schema contract while the project is `0.x` | MINOR, with an explicit upgrade note | `0.4.0` -> `0.5.0` |
+| Breaking public API after the project declares `1.0.0` stability | MAJOR | `1.4.2` -> `2.0.0` |
+
+Do not reuse or replace a version already published to npm. If one release
+contains both fixes and a new capability, choose the larger applicable bump.
+When the correct category is ambiguous, pause and ask the release owner before
+editing `package.json`, creating a tag, or publishing.
+
 1. Bump `version` in `package.json` (and update any changelog).
 2. Push to a `release/*` branch (e.g. `git push origin main:release/0.1.2`).
 3. The Release workflow publishes to npm.
