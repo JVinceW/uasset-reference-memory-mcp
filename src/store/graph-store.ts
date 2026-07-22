@@ -183,6 +183,19 @@ export class GraphStore implements QueryDb {
       .all(guid) as Edge[];
   }
 
+  /** Distinct sources with edges pointing at any of the given target guids. */
+  incomingSourceGuids(targetGuids: string[]): string[] {
+    if (targetGuids.length === 0) return [];
+    const placeholders = targetGuids.map(() => "?").join(", ");
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT from_guid AS guid FROM edges
+         WHERE to_guid IN (${placeholders}) ORDER BY from_guid`,
+      )
+      .all(...targetGuids) as { guid: string }[];
+    return rows.map((row) => row.guid);
+  }
+
   /** Remove all edges and unresolved refs originating from the given guids. */
   deleteOutgoing(guids: string[]): void {
     const delEdges = this.db.prepare("DELETE FROM edges WHERE from_guid = ?");
@@ -237,6 +250,19 @@ export class GraphStore implements QueryDb {
       for (const r of items) stmt.run(r.fromGuid, r.toGuid, r.context);
     });
     tx(refs);
+  }
+
+  /** Distinct sources with unresolved refs pointing at any given target guid. */
+  unresolvedSourceGuids(targetGuids: string[]): string[] {
+    if (targetGuids.length === 0) return [];
+    const placeholders = targetGuids.map(() => "?").join(", ");
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT from_guid AS guid FROM unresolved_refs
+         WHERE to_guid IN (${placeholders}) ORDER BY from_guid`,
+      )
+      .all(...targetGuids) as { guid: string }[];
+    return rows.map((row) => row.guid);
   }
 
   unresolvedCount(): number {

@@ -6,7 +6,7 @@ import { loadConfig, configPathFor } from "../config/project-config.js";
 import { BUILTIN_NODES } from "./builtins.js";
 import { assertUniqueAssetGuids } from "./guid-validation.js";
 import { readSerializationMode } from "./project-settings.js";
-import { extractReferences, kindFor, type Resolver } from "./ref-extractor.js";
+import { extractReferences, type Resolver } from "./ref-extractor.js";
 import {
   AddressableParseError,
   extractAddressableGroup,
@@ -178,16 +178,31 @@ async function applyIncremental(
     }
   }
 
+  const typeChangedTargetGuids = updatedNodes
+    .filter((node) => store.getNode(node.guid)?.assetType !== node.assetType)
+    .map((node) => node.guid);
+  const affectedSourceGuids = new Set([
+    ...store.incomingSourceGuids(typeChangedTargetGuids),
+    ...store.unresolvedSourceGuids(addedNodes.map((node) => node.guid)),
+  ]);
+  const currentNodesByGuid = new Map(nodes.map((node) => [node.guid, node]));
+  const affectedSourceNodes = [...affectedSourceGuids]
+    .map((guid) => currentNodesByGuid.get(guid))
+    .filter((node): node is AssetNode => node !== undefined);
+
   // Nodes: upsert changed, then handle removals (demote inbound, drop node).
   store.upsertNodes([...addedNodes, ...updatedNodes]);
   for (const guid of removedGuids) store.demoteIncomingToUnresolved(guid);
   store.deleteOutgoing(removedGuids);
   store.deleteNodesByGuid(removedGuids);
 
-  // Edges: promote inbound for new targets, re-extract outbound for changed files.
-  for (const n of addedNodes) store.promoteUnresolved(n.guid, kindFor(n.assetType));
-  store.deleteOutgoing(updatedNodes.map((n) => n.guid));
-  const changed = [...addedNodes, ...updatedNodes];
+  // Edges: re-extract changed files and unchanged sources whose target type or
+  // resolution changed. Re-reading the source preserves full edge fidelity.
+  const changedByGuid = new Map(
+    [...addedNodes, ...updatedNodes, ...affectedSourceNodes].map((node) => [node.guid, node]),
+  );
+  const changed = [...changedByGuid.values()];
+  store.deleteOutgoing(changed.map((node) => node.guid));
   const { edges, unresolved, addressableGroups } = await extractAll(
     projectRoot,
     changed,

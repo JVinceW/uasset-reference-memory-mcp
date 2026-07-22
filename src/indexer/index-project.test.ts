@@ -160,6 +160,43 @@ describe("indexProject incremental", () => {
     store.close();
   });
 
+  test("retypes incoming references when a stable guid changes asset type", async () => {
+    const sourceGuid = "a".repeat(32);
+    const targetGuid = "b".repeat(32);
+    const originalPath = "Assets/Target.mat";
+    const movedPath = "Assets/Target.prefab";
+    await writeAsset(originalPath, targetGuid);
+    await writeAsset(
+      "Assets/Source.prefab",
+      sourceGuid,
+      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${targetGuid}, type: 3}\n`,
+    );
+    await indexProject(root, { dbPath });
+
+    let store = GraphStore.open(dbPath);
+    expect(store.incomingEdges(targetGuid)).toMatchObject([{ refKind: "USES_MATERIAL" }]);
+    store.close();
+
+    await rename(join(root, originalPath), join(root, movedPath));
+    await rename(join(root, `${originalPath}.meta`), join(root, `${movedPath}.meta`));
+
+    const summary = await indexProject(root, { dbPath });
+    expect(summary).toMatchObject({ added: 0, updated: 1, removed: 0, unchanged: 1 });
+
+    store = GraphStore.open(dbPath);
+    expect(store.incomingEdges(targetGuid)).toEqual([
+      {
+        fromGuid: sourceGuid,
+        toGuid: targetGuid,
+        refKind: "NESTED_PREFAB",
+        fileId: "100100000",
+        context: "m_Target",
+        count: 1,
+      },
+    ]);
+    store.close();
+  });
+
   test("reports a guid replacement and leaves references to the old guid unresolved", async () => {
     const sourceGuid = "a".repeat(32);
     const oldGuid = "b".repeat(32);
@@ -343,7 +380,7 @@ describe("indexProject incremental", () => {
     store.close();
   });
 
-  test("removes a target with a missing meta and restores its unresolved edge", async () => {
+  test("removes a target with a missing meta and restores its full edge fidelity", async () => {
     const sourceGuid = "a".repeat(32);
     const targetGuid = "b".repeat(32);
     const targetPath = "Assets/Target.prefab";
@@ -351,7 +388,7 @@ describe("indexProject incremental", () => {
     await writeAsset(
       "Assets/Source.prefab",
       sourceGuid,
-      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${targetGuid}, type: 3}\n`,
+      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${targetGuid}, type: 3}\n  m_Target: {fileID: 100100000, guid: ${targetGuid}, type: 3}\n`,
     );
     await indexProject(root, { dbPath });
 
@@ -376,10 +413,19 @@ describe("indexProject incremental", () => {
 
     await writeFile(join(root, `${targetPath}.meta`), meta(targetGuid));
     const restored = await indexProject(root, { dbPath });
-    expect(restored).toMatchObject({ added: 1, removed: 0 });
+    expect(restored).toMatchObject({ added: 1, removed: 0, unchanged: 1 });
     store = GraphStore.open(dbPath);
     expect(store.getNode(targetGuid)?.path).toBe(targetPath);
-    expect(store.incomingEdges(targetGuid)).toHaveLength(1);
+    expect(store.incomingEdges(targetGuid)).toEqual([
+      {
+        fromGuid: sourceGuid,
+        toGuid: targetGuid,
+        refKind: "NESTED_PREFAB",
+        fileId: "100100000",
+        context: "m_Target",
+        count: 2,
+      },
+    ]);
     expect(store.unresolvedCount()).toBe(0);
     store.close();
   });

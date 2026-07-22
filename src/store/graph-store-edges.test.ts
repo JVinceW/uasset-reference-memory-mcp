@@ -44,3 +44,31 @@ describe("promoteUnresolved", () => {
     store.close();
   });
 });
+
+describe("source guid lookups", () => {
+  test("returns distinct sources with incoming edges to any target", () => {
+    const store = GraphStore.open(":memory:");
+    store.insertEdges([
+      edge({ fromGuid: A, toGuid: X, context: "first" }),
+      edge({ fromGuid: A, toGuid: X, context: "second" }),
+      edge({ fromGuid: B, toGuid: X }),
+    ]);
+
+    expect(store.incomingSourceGuids([X])).toEqual([A, B]);
+    expect(store.incomingSourceGuids([])).toEqual([]);
+    store.close();
+  });
+
+  test("returns distinct sources with unresolved references to any target", () => {
+    const store = GraphStore.open(":memory:");
+    store.insertUnresolved([
+      { fromGuid: A, toGuid: X, context: "first" },
+      { fromGuid: A, toGuid: X, context: "second" },
+      { fromGuid: B, toGuid: X, context: "ref" },
+    ]);
+
+    expect(store.unresolvedSourceGuids([X])).toEqual([A, B]);
+    expect(store.unresolvedSourceGuids([])).toEqual([]);
+    store.close();
+  });
+});
