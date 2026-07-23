@@ -25,6 +25,12 @@ on.
 
 - Every `.meta` under `Assets/`, `Packages/`, and `Library/PackageCache/` yields
   exactly one asset node keyed by GUID.
+- Active local UPM directory dependencies outside the project are discovered
+  automatically from Unity package metadata.
+- External package assets use canonical `Packages/<package-name>/...` paths;
+  absolute physical paths are not persisted.
+- Embedded packages override external and cached copies of the same package.
+- Project/package reference extraction crosses external package boundaries.
 - `asset_type` is derived from extension + importer type and covers the enum in
   `asset-graph-model.md` (unmapped → `Other`).
 - Folders produce nodes.
@@ -62,11 +68,14 @@ Establishes the fixture Unity project used by later integration tests.
 
 ## Evidence
 
-- `npm test` — 45 tests pass across 4 files (`meta-parse`, `asset-type`,
-  `origin` unit tests; `meta-scanner` integration over a real temp fixture tree).
-- `npm run typecheck` — clean (`tsc --noEmit`).
-- Durable proof recorded: `story verify US-001` = pass; unit=1, integration=1.
-- Modules: `src/indexer/{meta-parse,asset-type,origin,meta-scanner,types}.ts`.
+- `npm test` — 39 test files and 289 tests passed.
+- `npm run typecheck` — exited 0 (`tsc --noEmit`).
+- `npm run build` — exited 0.
+- `npm pack --dry-run` and `npm pack --dry-run --prefix
+  unity/com.jvincew.assetreferencememory` — each exited 0 and listed 125
+  intended distributable files.
+- `git diff --check` — exited 0 with no whitespace errors.
+- Modules: `src/indexer/{package-sources,meta-scanner,index-project,types}.ts`.
 
 ### Boundary notes carried to later stories
 

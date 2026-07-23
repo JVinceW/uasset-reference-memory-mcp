@@ -26,7 +26,7 @@ Date: 2026-07-23
 
 ## Status
 
-Active
+Completed
 
 ## Outcome
 
@@ -793,10 +793,10 @@ git commit -m "docs: document external UPM indexing"
 ## Progress
 
 - [x] Design approved and committed as `9cbb7e8`.
-- [ ] Task 1: Discover and validate active package sources.
-- [ ] Task 2: Scan physical roots into canonical Unity paths.
-- [ ] Task 3: Extract references and reconcile external packages.
-- [ ] Task 4: Publish the contract and run repository validation.
+- [x] Task 1: Discover and validate active package sources.
+- [x] Task 2: Scan physical roots into canonical Unity paths.
+- [x] Task 3: Extract references and reconcile external packages.
+- [x] Task 4: Publish the contract and run repository validation.
 
 ## Decisions
 
@@ -811,9 +811,25 @@ git commit -m "docs: document external UPM indexing"
 
 ## Validation
 
-- Focused proof: pending Tasks 1-3.
-- Repository-required checks: pending Task 4.
+- Focused proof: `src/indexer/package-sources.test.ts` (20 tests),
+  `meta-scanner.test.ts` (14), `scan-ignore.test.ts` (4),
+  `index-project-edges.test.ts` (6), and `index-project.test.ts` (25) pass as
+  part of the full suite.
+- `npm test` — exit 0; 39 test files and 289 tests passed.
+- `npm run typecheck` — exit 0.
+- `npm run build` — exit 0.
+- `npm pack --dry-run` — exit 0; 125 intended distributable files.
+- `npm pack --dry-run --prefix unity/com.jvincew.assetreferencememory` — exit
+  0; 125 intended distributable files.
+- `git diff --check` — exit 0; no whitespace errors.
+- Final boundary inspection found only the two documentation files pending this
+  execution record; no generated database, lockfile churn, tarball, or
+  unrelated documentation was present.
 
 ## Result
 
-Complete after implementation and validation.
+Implemented automatic discovery of active local UPM directory dependencies,
+canonical physical-to-virtual scanning, cross-package reference extraction, and
+portable package-discovery fingerprint persistence. Published the product and
+story contract, then completed repository validation. This plan was promoted to
+`docs/plans/completed/` after the checks above passed.

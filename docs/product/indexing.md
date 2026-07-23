@@ -19,12 +19,35 @@ feed the graph store:
 | --- | --- | --- | --- |
 | `Assets/` | nodes + outgoing edges | `project` | The user's own assets |
 | `Packages/` | nodes + outgoing edges | `package` | Embedded/local packages |
+| External local UPM package | nodes + outgoing edges | `package` | Auto-discovered from Unity manifest/lock metadata; stored as `Packages/<name>/...` |
 | `Library/PackageCache/` | nodes + outgoing edges | `package` | Registry packages |
 | Built-in GUIDs | pre-seeded synthetic nodes | `builtin` | Never unresolved |
 
 Package identity keys on **GUID** (stable). PackageCache paths carry version
 suffixes and are regenerated, so path is informational for packages.
 `package_id` records e.g. `com.unity.render-pipelines.universal@14.0.8`.
+
+### External local UPM packages
+
+The scanner discovers active local directory dependencies from
+`Packages/manifest.json` and `Packages/packages-lock.json`. Direct manifest
+declarations take precedence when both files describe a package. Relative
+`file:` paths resolve from the project's `Packages/` directory. For a package
+name with multiple available sources, selection is deterministic: embedded
+`Packages/<name>` wins, then the active external local directory, then a
+matching `Library/PackageCache` copy.
+
+External package files are read from their transient physical source paths only
+for the current scan. Graph nodes and reference edges retain the canonical
+Unity virtual path `Packages/<package-name>/...`; absolute physical paths are
+never persisted. The index also stores a
+`package_discovery_fingerprint` metadata value so a changed manifest, lockfile,
+or selected source causes incremental reconciliation.
+
+Discovery is deliberately bounded. Invalid, inaccessible, missing, or
+name-mismatched local package directories produce `package-discovery` warnings
+and are skipped while valid roots continue. The indexer does not follow local
+`.tgz` files, `file://` Git URLs, downloads, or arbitrary additional roots.
 
 ## Query Behavior Rules (enforced by the tools that consume this index)
 
