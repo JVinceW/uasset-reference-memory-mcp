@@ -1,0 +1,8 @@
+[mcp_servers.linear]
+enabled = false
+
+[mcp_servers.unityMCP]
+enabled = false
+
+[mcp_servers.pencil]
+enabled = false
