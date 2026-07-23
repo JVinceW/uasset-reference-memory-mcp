@@ -64,7 +64,7 @@ export async function indexProject(
   const incremental =
     hasCurrentIndex &&
     GraphStore.readSchemaVersion(dbPath) === SCHEMA_VERSION &&
-    !GraphStore.hasNonCanonicalAssetGuids(dbPath);
+    !GraphStore.requiresLegacyRebuild(dbPath);
   if (incremental) await copyFile(dbPath, tempPath);
 
   const store = GraphStore.open(tempPath);

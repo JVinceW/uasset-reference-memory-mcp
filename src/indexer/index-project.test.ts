@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import Database from "better-sqlite3";
 import { indexProject } from "./index-project.js";
 import { DuplicateGuidError } from "./guid-validation.js";
+import { scanProject } from "./meta-scanner.js";
 import { GraphStore } from "../store/graph-store.js";
 import type { AssetNode } from "./types.js";
 
@@ -659,6 +660,70 @@ describe("indexProject incremental", () => {
     } finally {
       store.close();
     }
+  });
+
+  test("rebuilds a legacy schema-3 index with duplicate asset paths", async () => {
+    const oldTargetGuid = "a".repeat(32);
+    const currentTargetGuid = "b".repeat(32);
+    const sourceGuid = "c".repeat(32);
+    const targetPath = "Assets/Target.prefab";
+    const sourcePath = "Assets/Source.prefab";
+    await writeAsset(targetPath, currentTargetGuid);
+    await writeAsset(
+      sourcePath,
+      sourceGuid,
+      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${oldTargetGuid}, type: 3}\n`,
+    );
+
+    const current = await scanProject(root);
+    const currentTarget = current.nodes.find((node) => node.guid === currentTargetGuid)!;
+    const currentSource = current.nodes.find((node) => node.guid === sourceGuid)!;
+    const legacy = GraphStore.open(dbPath);
+    legacy.upsertNodes([
+      { ...currentTarget, guid: oldTargetGuid },
+      currentTarget,
+      currentSource,
+    ]);
+    legacy.insertEdges([
+      {
+        fromGuid: sourceGuid,
+        toGuid: oldTargetGuid,
+        refKind: "NESTED_PREFAB",
+        fileId: "100100000",
+        context: "m_Target",
+        count: 1,
+      },
+    ]);
+    expect(legacy.getNodeMtimes().get(targetPath)?.guid).toBe(currentTargetGuid);
+    legacy.close();
+
+    const summary = await indexProject(root, { dbPath });
+    expect(summary).toMatchObject({ added: 2, updated: 0, removed: 0, unchanged: 0 });
+    expect(summary.warnings).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "guid-replaced" })]),
+    );
+
+    const store = GraphStore.open(dbPath);
+    try {
+      expect(
+        store.db
+          .prepare("SELECT guid, path FROM assets WHERE origin = 'project' ORDER BY path")
+          .all(),
+      ).toEqual([
+        { guid: sourceGuid, path: sourcePath },
+        { guid: currentTargetGuid, path: targetPath },
+      ]);
+      expect(store.getNode(oldTargetGuid)).toBeNull();
+      expect(store.outgoingEdges(sourceGuid)).toEqual([]);
+      expect(
+        store.db
+          .prepare("SELECT from_guid, to_guid, context FROM unresolved_refs")
+          .all(),
+      ).toEqual([{ from_guid: sourceGuid, to_guid: oldTargetGuid, context: "m_Target" }]);
+    } finally {
+      store.close();
+    }
+    expect((await readdir(root)).filter((name) => name.includes("building"))).toEqual([]);
   });
 });
 

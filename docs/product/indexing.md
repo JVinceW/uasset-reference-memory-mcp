@@ -65,13 +65,15 @@ replaces all groups, entries, and labels. Incremental indexing replaces the
 rows owned by changed group assets and removes stale membership when a group is
 deleted or stops being a group. Foreign-key cascades remove dependent entries
 and labels. A schema mismatch requires `index_project` to rebuild schema 3;
-generated indexes are not migrated in place. A pre-canonical schema-3 index
-whose `assets` table contains uppercase GUID identity also receives a one-time
-automatic fresh rebuild. The old database is detected read-only and is never
-rewritten in place; current project files rebuild every GUID-bearing graph and
-Addressables row, and the replacement is published only after the rebuild
-succeeds. Its summary uses normal fresh-build counts and does not report those
-canonicalization changes as `guid-replaced` assets.
+generated indexes are not migrated in place. A legacy schema-3 index receives a
+one-time automatic fresh rebuild when its `assets` table contains uppercase
+GUID identity or more than one GUID at the same asset path. The latter can
+exist after a same-path replacement indexed by v0.3.0. The old database is
+detected read-only and is never rewritten in place; current project files
+rebuild every GUID-bearing graph and Addressables row, and the replacement is
+published only after the rebuild succeeds. Its summary uses normal fresh-build
+counts and does not report those compatibility changes as `guid-replaced`
+assets.
 
 ## Error Handling
 
@@ -81,9 +83,14 @@ unambiguous graph cannot be published.
 - **Unparseable YAML** → record the node (its `.meta` still parses), skip edge
   extraction, and add it to the warnings returned by that `index_project` run.
   Warnings are not replayed by `index_status`.
-- **Binary serialization detected** (expected-text file lacks the `%YAML`
-  header) → fail loudly: "this project uses binary serialization; switch Asset
-  Serialization to Force Text." Do not produce a silently-empty graph.
+- **Project-wide ForceBinary** in `ProjectSettings/EditorSettings.asset` →
+  abort the run with guidance to switch Asset Serialization to Force Text. Do
+  not publish a silently empty graph.
+- **Incidental non-YAML or binary content in an asset expected to contain
+  YAML** → keep its node, add a `binary-serialized` warning, and skip
+  outgoing-reference extraction for that asset instead of aborting the whole
+  run. Known non-YAML formats such as textures, models, and audio are retained
+  as nodes but are not candidates for outgoing-reference extraction.
 - **Missing, orphan, or invalid `.meta`** → warn and skip the incomplete
   logical asset. If its GUID was previously indexed and is now absent from the
   complete scan, remove that node and leave incoming GUID references unresolved;

@@ -63,6 +63,7 @@ still require a later run after the project is stable.
 | Duplicate GUIDs | The run fails with `DuplicateGuidError` before publication. Repair the conflicting metas in Unity or source control and retry. |
 | Uppercase GUID in a `.meta` | The GUID is canonicalized to lowercase, so it resolves consistently with serialized references. |
 | Existing schema-3 index containing uppercase asset GUIDs | A one-time fresh rebuild creates a canonical lowercase index. It is published atomically and does not report those canonicalization changes as replacements. |
+| Existing schema-3 index containing multiple GUIDs at one asset path | A one-time fresh rebuild from current project files removes the obsolete row and reconstructs edges and unresolved references. It uses fresh-build counts and does not report a compatibility-only `guid-replaced` warning. |
 
 ## References And Addressables
 
@@ -85,11 +86,16 @@ that run. Missing or invalid metas are also warnings, and the incomplete pair
 is excluded.
 
 Other conditions prevent safe publication. Duplicate GUIDs stop the run before
-the new database replaces the prior good one. Binary asset serialization fails
-with guidance to enable Unity's Force Text serialization setting. If a run is
-interrupted, rerun it; the atomic replacement leaves the previous good index
-available. After fixing project files, run normal indexing again, or use
-`force: true` when the refreshed result must be guaranteed current.
+the new database replaces the prior good one. A project-wide ForceBinary
+setting in `ProjectSettings/EditorSettings.asset` also aborts with guidance to
+enable Unity's Force Text serialization setting. In contrast, non-YAML or
+binary content in an asset expected to contain YAML produces a
+`binary-serialized` warning and skips only that asset's outgoing-reference
+extraction. Known non-YAML formats such as textures, models, and audio remain
+nodes but are not outgoing-reference candidates. If a run is interrupted,
+rerun it; the atomic replacement leaves the previous good index available.
+After fixing project files, run normal indexing again, or use `force: true`
+when the refreshed result must be guaranteed current.
 
 ## Recommended Agent Workflow
 

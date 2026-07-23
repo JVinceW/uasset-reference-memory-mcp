@@ -1,6 +1,6 @@
 # Reindex Documentation Design
 
-**Date:** 2026-07-23  
+**Date:** 2026-07-23
 **Status:** Approved direction; artifact production pending review
 
 ## Goal

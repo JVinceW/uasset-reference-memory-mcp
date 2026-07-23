@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
@@ -74,13 +74,13 @@ describe("GraphStore canonical guid detection", () => {
     store.close();
 
     try {
-      expect(GraphStore.hasNonCanonicalAssetGuids(path)).toBe(false);
+      expect(GraphStore.requiresLegacyRebuild(path)).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
-  test("accepts canonical lowercase asset guids", async () => {
+  test("accepts canonical lowercase asset guids at unique paths", async () => {
     const root = await mkdtemp(join(tmpdir(), "graph-store-guid-"));
     const path = join(root, "index.db");
     const store = GraphStore.open(path);
@@ -90,7 +90,7 @@ describe("GraphStore canonical guid detection", () => {
     store.close();
 
     try {
-      expect(GraphStore.hasNonCanonicalAssetGuids(path)).toBe(false);
+      expect(GraphStore.requiresLegacyRebuild(path)).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -106,7 +106,44 @@ describe("GraphStore canonical guid detection", () => {
     store.close();
 
     try {
-      expect(GraphStore.hasNonCanonicalAssetGuids(path)).toBe(true);
+      expect(GraphStore.requiresLegacyRebuild(path)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("detects duplicate asset paths", async () => {
+    const root = await mkdtemp(join(tmpdir(), "graph-store-guid-"));
+    const path = join(root, "index.db");
+    const store = GraphStore.open(path);
+    store.upsertNodes([
+      node({ guid: "a".repeat(32), path: "Assets/Target.prefab" }),
+      node({ guid: "b".repeat(32), path: "Assets/Target.prefab" }),
+    ]);
+    store.close();
+
+    try {
+      expect(GraphStore.requiresLegacyRebuild(path)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("closes the read-only compatibility probe handle", async () => {
+    const root = await mkdtemp(join(tmpdir(), "graph-store-guid-"));
+    const path = join(root, "index.db");
+    const movedPath = join(root, "moved.db");
+    const store = GraphStore.open(path);
+    store.upsertNodes([
+      node({ guid: "a".repeat(32), path: "Assets/A.prefab" }),
+      node({ guid: "b".repeat(32), path: "Assets/B.prefab" }),
+    ]);
+    store.close();
+
+    try {
+      expect(GraphStore.requiresLegacyRebuild(path)).toBe(false);
+      await rename(path, movedPath);
+      await rename(movedPath, path);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

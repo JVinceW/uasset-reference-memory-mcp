@@ -48,12 +48,21 @@ export class GraphStore implements QueryDb {
     }
   }
 
-  /** Whether a valid store contains pre-canonical uppercase asset identity. */
-  static hasNonCanonicalAssetGuids(path: string): boolean {
+  /** Whether a valid schema-3 store requires one compatibility rebuild. */
+  static requiresLegacyRebuild(path: string): boolean {
     const db = new Database(path, { readonly: true, fileMustExist: true });
     try {
       return (
-        db.prepare("SELECT 1 FROM assets WHERE guid <> lower(guid) LIMIT 1").get() !== undefined
+        db
+          .prepare(
+            `SELECT 1
+             WHERE EXISTS (
+               SELECT 1 FROM assets WHERE guid <> lower(guid)
+             ) OR EXISTS (
+               SELECT 1 FROM assets GROUP BY path HAVING COUNT(*) > 1
+             )`,
+          )
+          .get() !== undefined
       );
     } finally {
       db.close();
