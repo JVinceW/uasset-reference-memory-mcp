@@ -23,8 +23,8 @@ on.
 
 ## Acceptance Criteria
 
-- Every `.meta` under `Assets/`, `Packages/`, and `Library/PackageCache/` yields
-  exactly one asset node keyed by GUID.
+- Every eligible `.meta` under `Assets/` and the package roots selected after
+  package-name precedence yields exactly one asset node keyed by GUID.
 - Active local UPM directory dependencies outside the project are discovered
   automatically from Unity package metadata.
 - External package assets use canonical `Packages/<package-name>/...` paths;
