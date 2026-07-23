@@ -92,6 +92,9 @@ export async function indexProject(
     store.setMeta("project_root", projectRoot);
     store.setMeta("indexed_at", new Date().toISOString());
     store.setMeta("asset_count", String(store.assetCount()));
+    if (result.packageFingerprint) {
+      store.setMeta("package_discovery_fingerprint", result.packageFingerprint);
+    }
     if (opts.unityVersion) store.setMeta("unity_version", opts.unityVersion);
     const lockMtime = await lockfileMtime(projectRoot);
     if (lockMtime !== null) store.setMeta("packages_lock_mtime", String(lockMtime));
@@ -243,8 +246,9 @@ async function extractAll(
   for (const node of nodes) {
     if (node.isBinary) continue; // folders and non-YAML assets
     let content: string;
+    const sourcePath = node.sourcePath ?? join(projectRoot, node.path);
     try {
-      content = await readFile(join(projectRoot, node.path), "utf8");
+      content = await readFile(sourcePath, "utf8");
     } catch {
       warnings.push({
         kind: "unreadable-asset",

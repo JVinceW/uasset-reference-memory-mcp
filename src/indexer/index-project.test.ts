@@ -22,6 +22,31 @@ async function writeAsset(rel: string, guid: string, body = "%YAML 1.1\n"): Prom
   await writeFile(join(root, rel + ".meta"), meta(guid));
 }
 
+async function externalPackage(name: string, guid?: string): Promise<string> {
+  const external = join(root, "external", name, guid ?? "default");
+  await mkdir(external, { recursive: true });
+  await writeFile(join(external, "package.json"), JSON.stringify({ name, version: "1.0.0" }));
+  if (guid) await packageAsset(external, "Runtime/Rules.asset", guid);
+  return external;
+}
+
+async function packageAsset(
+  packageRoot: string,
+  path: string,
+  guid: string,
+  body = "%YAML 1.1\n",
+): Promise<void> {
+  const assetPath = join(packageRoot, path);
+  await mkdir(join(assetPath, ".."), { recursive: true });
+  await writeFile(assetPath, body);
+  await writeFile(`${assetPath}.meta`, meta(guid));
+}
+
+async function projectManifest(dependencies: Record<string, string>): Promise<void> {
+  await mkdir(join(root, "Packages"), { recursive: true });
+  await writeFile(join(root, "Packages", "manifest.json"), JSON.stringify({ dependencies }));
+}
+
 function scannedNode(guid: string, path: string): AssetNode {
   return {
     guid,
@@ -119,6 +144,47 @@ describe("indexProject fresh build", () => {
 });
 
 describe("indexProject incremental", () => {
+  test("updates and removes external package assets incrementally", async () => {
+    const external = await externalPackage("com.company.gameplay");
+    await projectManifest({
+      "com.company.gameplay": `file:${external.replaceAll("\\\\", "/")}`,
+    });
+    await packageAsset(external, "Runtime/Rules.asset", "a".repeat(32), "value: 1");
+    await indexProject(root, { dbPath });
+
+    await packageAsset(external, "Runtime/Rules.asset", "a".repeat(32), "value: 2");
+    const advanced = new Date(Date.now() + 2_000);
+    await utimes(join(external, "Runtime", "Rules.asset"), advanced, advanced);
+    const changed = await indexProject(root, { dbPath });
+    expect(changed.updated).toBe(1);
+
+    await rm(join(external, "Runtime", "Rules.asset"));
+    await rm(join(external, "Runtime", "Rules.asset.meta"));
+    const removed = await indexProject(root, { dbPath });
+    expect(removed.removed).toBe(1);
+  });
+
+  test("reconciles a retargeted local dependency and records its fingerprint", async () => {
+    const first = await externalPackage("com.company.gameplay", "a".repeat(32));
+    const second = await externalPackage("com.company.gameplay", "b".repeat(32));
+    await projectManifest({ "com.company.gameplay": `file:${first}` });
+    await indexProject(root, { dbPath });
+    const firstStore = GraphStore.open(dbPath);
+    const firstFingerprint = firstStore.getMeta("package_discovery_fingerprint");
+    firstStore.close();
+
+    await projectManifest({ "com.company.gameplay": `file:${second}` });
+    const summary = await indexProject(root, { dbPath });
+    const store = GraphStore.open(dbPath);
+
+    expect(summary.added).toBe(1);
+    expect(summary.removed).toBe(1);
+    expect(store.getMeta("package_discovery_fingerprint")).not.toBe(firstFingerprint);
+    expect(store.getNode("b".repeat(32))).not.toBeNull();
+    expect(store.getNode("a".repeat(32))).toBeNull();
+    store.close();
+  });
+
   test("counts a meta-only change as one updated logical asset", async () => {
     const guid = "a".repeat(32);
     const assetPath = "Assets/A.prefab";
