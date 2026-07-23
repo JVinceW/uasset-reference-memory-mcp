@@ -80,9 +80,10 @@ assets.
 Indexing continues past recoverable per-file problems, but stops when a safe,
 unambiguous graph cannot be published.
 
-- **Unparseable YAML** → record the node (its `.meta` still parses), skip edge
-  extraction, and add it to the warnings returned by that `index_project` run.
-  Warnings are not replayed by `index_status`.
+- **Malformed Addressables group data** → retain the node and any ordinary
+  references already extracted, omit that asset's Addressables group rows, and
+  add an `unreadable-asset` warning to that `index_project` run. Warnings are
+  not replayed by `index_status`.
 - **Project-wide ForceBinary** in `ProjectSettings/EditorSettings.asset` →
   abort the run with guidance to switch Asset Serialization to Force Text. Do
   not publish a silently empty graph.

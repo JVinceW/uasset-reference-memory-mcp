@@ -80,10 +80,11 @@ group disappears or stops being an Addressables group.
 ## Failure And Recovery
 
 Some file-level conditions are recoverable: the index warns and continues
-where it can safely publish a coherent graph. For example, an unparseable YAML
-asset still has a node when its `.meta` is valid, but its edges are skipped for
-that run. Missing or invalid metas are also warnings, and the incomplete pair
-is excluded.
+where it can safely publish a coherent graph. For example, malformed
+Addressables group data leaves the asset node and any ordinary references
+intact, omits that asset's Addressables group rows, and produces an
+`unreadable-asset` warning. Missing or invalid metas are also warnings, and the
+incomplete pair is excluded.
 
 Other conditions prevent safe publication. Duplicate GUIDs stop the run before
 the new database replaces the prior good one. A project-wide ForceBinary
