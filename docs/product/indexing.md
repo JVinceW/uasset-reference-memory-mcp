@@ -30,10 +30,16 @@ suffixes and are regenerated, so path is informational for packages.
 ### External local UPM packages
 
 The scanner discovers active local directory dependencies from
-`Packages/manifest.json` and `Packages/packages-lock.json`. Direct manifest
-declarations take precedence when both files describe a package. Relative
-`file:` paths resolve from the project's `Packages/` directory. For a package
-name with multiple available sources, selection is deterministic: embedded
+`Packages/manifest.json` and `Packages/packages-lock.json`. The manifest is the
+authority for each run: it must be a JSON object, and `dependencies` must be a
+JSON object when present. A missing or invalid manifest disables external-local
+discovery for that run, emits one bounded manifest warning, and does not prevent
+embedded or cached package roots from scanning. A valid lockfile may supply
+local transitive package names absent from the direct manifest dependencies.
+Every direct dependency name suppresses a same-name lockfile candidate, even
+when its direct value is non-local or unsupported. Relative `file:` paths
+resolve from the project's `Packages/` directory. For a package name with
+multiple available sources, selection is deterministic: embedded
 `Packages/<name>` wins, then the active external local directory, then a
 matching `Library/PackageCache` copy.
 
@@ -42,12 +48,18 @@ for the current scan. Graph nodes and reference edges retain the canonical
 Unity virtual path `Packages/<package-name>/...`; absolute physical paths are
 never persisted. The index also stores a
 `package_discovery_fingerprint` metadata value so a changed manifest, lockfile,
-or selected source causes incremental reconciliation.
+or selected source discards the copied incremental staging database and
+rebuilds the complete candidate graph before atomic publication. This refreshes
+outgoing edges even when a retargeted package preserves the same GUID, virtual
+path, and asset/meta timestamps.
 
 Discovery is deliberately bounded. Invalid, inaccessible, missing, or
 name-mismatched local package directories produce `package-discovery` warnings
 and are skipped while valid roots continue. The indexer does not follow local
 `.tgz` files, `file://` Git URLs, downloads, or arbitrary additional roots.
+Default and configured ignore predicates are applied to each canonical root
+descriptor before recursion as well as to descendants, so an ignored package
+root produces neither nodes nor per-entry warnings.
 
 ## Query Behavior Rules (enforced by the tools that consume this index)
 

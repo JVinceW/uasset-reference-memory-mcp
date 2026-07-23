@@ -43,6 +43,18 @@ async function writeCachedPackage(folder: string, name: string): Promise<string>
   return packageRoot;
 }
 
+async function writeLocalLock(name: string, packageRoot: string): Promise<void> {
+  await mkdir(join(root, "Packages"), { recursive: true });
+  await writeFile(
+    join(root, "Packages", "packages-lock.json"),
+    JSON.stringify({
+      dependencies: {
+        [name]: { source: "local", version: `file:${packageRoot}` },
+      },
+    }),
+  );
+}
+
 describe("discoverScanRoots", () => {
   test("discovers a relative external local package with a canonical virtual root", async () => {
     const external = join(root, "..", "modules", "com.company.gameplay");
@@ -154,6 +166,63 @@ describe("discoverScanRoots", () => {
 
     const result = await discoverScanRoots(root);
     expect(result.warnings).toContainEqual(expect.objectContaining({ kind: "package-discovery", path: "Packages/manifest.json" }));
+  });
+
+  test.each([
+    ["missing manifest", undefined],
+    ["malformed manifest", "{"],
+  ])("does not discover lockfile local packages with a %s", async (_name, manifestText) => {
+    const external = await writeExternalPackage("lock-package", "com.company.gameplay");
+    const embedded = await writeEmbeddedPackage("com.company.embedded");
+    const cached = await writeCachedPackage(
+      "com.company.cached@1.0.0",
+      "com.company.cached",
+    );
+    await writeLocalLock("com.company.gameplay", external);
+    if (manifestText !== undefined) {
+      await writeFile(join(root, "Packages", "manifest.json"), manifestText);
+    }
+
+    const result = await discoverScanRoots(root);
+
+    expect(result.roots).not.toContainEqual(expect.objectContaining({ physicalRoot: external }));
+    expect(result.roots).toContainEqual(expect.objectContaining({ physicalRoot: embedded }));
+    expect(result.roots).toContainEqual(expect.objectContaining({ physicalRoot: cached }));
+    expect(result.warnings.filter((warning) =>
+      warning.kind === "package-discovery" &&
+      warning.path === "Packages/manifest.json")).toHaveLength(1);
+  });
+
+  test.each([
+    ["null", null],
+    ["an array", []],
+    ["a string", "invalid"],
+  ])("requires manifest dependencies to be a plain object when it is %s", async (_name, dependencies) => {
+    const external = await writeExternalPackage("lock-package", "com.company.gameplay");
+    await writeLocalLock("com.company.gameplay", external);
+    await writeFile(
+      join(root, "Packages", "manifest.json"),
+      JSON.stringify({ dependencies }),
+    );
+
+    const result = await discoverScanRoots(root);
+
+    expect(result.roots).not.toContainEqual(expect.objectContaining({ physicalRoot: external }));
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      kind: "package-discovery",
+      path: "Packages/manifest.json",
+      message: expect.stringMatching(/dependencies.*object/i),
+    }));
+  });
+
+  test("lets a direct non-local manifest dependency suppress a stale local lock entry", async () => {
+    const external = await writeExternalPackage("stale-lock-package", "com.company.gameplay");
+    await writeProjectManifest({ "com.company.gameplay": "1.2.3" });
+    await writeLocalLock("com.company.gameplay", external);
+
+    const result = await discoverScanRoots(root);
+
+    expect(result.roots).not.toContainEqual(expect.objectContaining({ physicalRoot: external }));
   });
 
   test("warns for a malformed lockfile", async () => {

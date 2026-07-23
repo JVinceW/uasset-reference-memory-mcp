@@ -46,6 +46,31 @@ describe("buildIgnore", () => {
 });
 
 describe("scanProject with a custom ignore", () => {
+  test("skips an exact external package root and descendants without affecting Assets", async () => {
+    await externalPackageWithAsset("com.company.gameplay", "Runtime/Rules.asset");
+    await writeFile(join(root, "Assets", "Keep.prefab"), "%YAML 1.1\n");
+    await writeFile(
+      join(root, "Assets", "Keep.prefab.meta"),
+      meta("a".repeat(32)),
+    );
+
+    const scanned = await scanProject(
+      root,
+      buildIgnore({
+        ignore: ["Packages/com.company.gameplay"],
+        ignoreDefaults: true,
+      }),
+    );
+
+    expect(scanned.nodes).toContainEqual(expect.objectContaining({
+      path: "Assets/Keep.prefab",
+    }));
+    expect(scanned.nodes.some((node) =>
+      node.path.startsWith("Packages/com.company.gameplay"))).toBe(false);
+    expect(scanned.warnings.some((warning) =>
+      warning.path.startsWith("Packages/com.company.gameplay"))).toBe(false);
+  });
+
   test("matches ignores against an external package's canonical path", async () => {
     await externalPackageWithAsset("com.company.gameplay", "Editor/Debug.asset");
     const scanned = await scanProject(
@@ -71,5 +96,30 @@ describe("scanProject with a custom ignore", () => {
     expect(names).toContain("Keep.prefab");
     expect(names).not.toContain("Skip.prefab");
     expect(result.warnings.some((w) => w.path.includes("Skip"))).toBe(false);
+  });
+});
+
+describe("scanProject with default ignores", () => {
+  test("skips a hidden direct package root without affecting Assets", async () => {
+    await mkdir(join(root, "Packages", ".git"), { recursive: true });
+    await writeFile(
+      join(root, "Packages", "manifest.json"),
+      JSON.stringify({ dependencies: {} }),
+    );
+    await writeFile(join(root, "Packages", ".git", "Hidden.asset"), "%YAML 1.1\n");
+    await writeFile(join(root, "Assets", "Keep.prefab"), "%YAML 1.1\n");
+    await writeFile(
+      join(root, "Assets", "Keep.prefab.meta"),
+      meta("a".repeat(32)),
+    );
+
+    const scanned = await scanProject(root);
+
+    expect(scanned.nodes).toContainEqual(expect.objectContaining({
+      path: "Assets/Keep.prefab",
+    }));
+    expect(scanned.nodes.some((node) => node.path.startsWith("Packages/.git"))).toBe(false);
+    expect(scanned.warnings.some((warning) =>
+      warning.path.startsWith("Packages/.git"))).toBe(false);
   });
 });

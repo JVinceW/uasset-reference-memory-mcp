@@ -63,6 +63,8 @@ export async function scanProject(
   const warnings = [...discovery.warnings];
 
   for (const root of discovery.roots) {
+    const rootName = root.virtualRoot.slice(root.virtualRoot.lastIndexOf("/") + 1);
+    if (ignore(rootName, root.virtualRoot)) continue;
     await walk(root, "", nodes, warnings, ignore);
   }
 

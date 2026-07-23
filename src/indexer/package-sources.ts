@@ -27,11 +27,14 @@ export async function discoverScanRoots(projectRoot: string): Promise<PackageDis
     claimedNonCache.add(packageId);
   }
 
-  const candidates = localCandidates(
-    packagesDir,
-    parseJson<Manifest>(manifestText, "manifest", warnings, true),
-    parseJson<Lockfile>(lockText, "lockfile", warnings, false),
-  );
+  const manifest = parseManifest(manifestText, warnings);
+  const candidates = manifest === null
+    ? new Map<string, string>()
+    : localCandidates(
+        packagesDir,
+        manifest,
+        parseJson<Lockfile>(lockText, "lockfile", warnings, false) ?? {},
+      );
   for (const [declaredName, physicalRoot] of candidates) {
     if (!isPackageNameSegment(declaredName)) {
       warnings.push(invalidPackageNameWarning(declaredName));
@@ -104,23 +107,49 @@ async function readOptional(path: string): Promise<string | null> {
   }
 }
 
-function parseJson<T>(text: string | null, name: "manifest" | "lockfile", warnings: ScanWarning[], required: boolean): T {
+function parseJson<T>(
+  text: string | null,
+  name: "manifest" | "lockfile",
+  warnings: ScanWarning[],
+  required: boolean,
+): T | null {
   const path = name === "manifest" ? "Packages/manifest.json" : "Packages/packages-lock.json";
   if (text === null) {
     if (required) warnings.push({ kind: "package-discovery", path, message: `${name} is missing or unreadable` });
-    return {} as T;
+    return null;
   }
   try {
     const parsed: unknown = JSON.parse(text);
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
       warnings.push({ kind: "package-discovery", path, message: `${name} must contain a JSON object` });
-      return {} as T;
+      return null;
     }
     return parsed as T;
   } catch {
     warnings.push({ kind: "package-discovery", path, message: `${name} contains malformed JSON` });
-    return {} as T;
+    return null;
   }
+}
+
+function parseManifest(text: string | null, warnings: ScanWarning[]): Manifest | null {
+  const manifest = parseJson<Manifest>(text, "manifest", warnings, true);
+  if (manifest === null) return null;
+  if (
+    manifest.dependencies !== undefined &&
+    (
+      typeof manifest.dependencies !== "object" ||
+      manifest.dependencies === null ||
+      Array.isArray(manifest.dependencies)
+    )
+  ) {
+    warnings.push({
+      kind: "package-discovery",
+      path: "Packages/manifest.json",
+      message: "manifest dependencies must contain a JSON object",
+    });
+    return null;
+  }
+  return manifest;
 }
 
 async function childDirectories(path: string): Promise<string[]> {
@@ -134,13 +163,16 @@ async function childDirectories(path: string): Promise<string[]> {
 
 function localCandidates(packagesDir: string, manifest: Manifest, lockfile: Lockfile): Map<string, string> {
   const candidates = new Map<string, string>();
+  const directDependencies = manifest.dependencies ?? {};
+  const directNames = new Set(Object.keys(directDependencies));
   for (const [name, entry] of Object.entries(lockfile.dependencies ?? {})) {
+    if (directNames.has(name)) continue;
     if (entry?.source === "local" && typeof entry.version === "string") {
       const path = localDirectory(packagesDir, entry.version);
       if (path !== null) candidates.set(name, path);
     }
   }
-  for (const [name, value] of Object.entries(manifest.dependencies ?? {})) {
+  for (const [name, value] of Object.entries(directDependencies)) {
     if (typeof value !== "string") continue;
     const path = localDirectory(packagesDir, value);
     if (path !== null) candidates.set(name, path);

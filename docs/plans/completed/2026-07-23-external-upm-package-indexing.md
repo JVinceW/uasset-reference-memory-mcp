@@ -797,6 +797,9 @@ git commit -m "docs: document external UPM indexing"
 - [x] Task 2: Scan physical roots into canonical Unity paths.
 - [x] Task 3: Extract references and reconcile external packages.
 - [x] Task 4: Publish the contract and run repository validation.
+- [x] 2026-07-24 final-review correctness wave: make the discovery fingerprint
+  authoritative for incremental selection, gate lock candidates behind a valid
+  manifest, and apply ignore predicates to root descriptors.
 
 ## Decisions
 
@@ -808,23 +811,42 @@ git commit -m "docs: document external UPM indexing"
   depending on the Unity Editor API.
 - 2026-07-23: Package-name precedence prevents local/cache duplicates; GUID
   validation remains the final collision boundary.
+- 2026-07-24: A changed package fingerprint discards the copied staging
+  database and performs a fresh rebuild before atomic publication. A custom
+  `ScanResult` without `packageFingerprint` retains the existing incremental
+  behavior.
+- 2026-07-24: A valid manifest is required before lockfile local candidates are
+  considered. Direct dependency names suppress same-name lock entries even
+  when their manifest values are non-local or unsupported; lock entries remain
+  eligible for transitive names absent from direct dependencies.
+- 2026-07-24: Default and configured ignore predicates are evaluated against
+  canonical scan-root descriptors before recursion, then against descendants.
 
 ## Validation
 
-- Focused proof: `src/indexer/package-sources.test.ts` (20 tests),
-  `meta-scanner.test.ts` (14), `scan-ignore.test.ts` (4),
-  `index-project-edges.test.ts` (6), and `index-project.test.ts` (25) pass as
-  part of the full suite.
-- `npm test` — exit 0; 39 test files and 289 tests passed.
+- Final-review RED proof:
+  `src/indexer/index-project.test.ts` ran 26 tests with 2 expected failures
+  (fingerprint changes still reported incremental counts, including
+  `added: 0` and `unchanged: 3` for the preserved-identity retarget);
+  `src/indexer/package-sources.test.ts` ran 26 tests with 6 expected failures
+  (invalid/missing manifest and stale direct lock authority);
+  `src/indexer/scan-ignore.test.ts` ran 6 tests with 2 expected failures
+  (package roots were entered before ignore evaluation).
+- Final-review focused GREEN proof: five test files and 78 tests passed:
+  `package-sources.test.ts` (26), `meta-scanner.test.ts` (14),
+  `scan-ignore.test.ts` (6), `index-project-edges.test.ts` (6), and
+  `index-project.test.ts` (26).
+- `npm test` — exit 0; 39 test files and 298 tests passed.
 - `npm run typecheck` — exit 0.
 - `npm run build` — exit 0.
 - `npm pack --dry-run` — exit 0; 125 intended distributable files.
 - `npm pack --dry-run --prefix unity/com.jvincew.assetreferencememory` — exit
   0; 125 intended distributable files.
 - `git diff --check` — exit 0; no whitespace errors.
-- Final boundary inspection found only the two documentation files pending this
-  execution record; no generated database, lockfile churn, tarball, or
-  unrelated documentation was present.
+- Final boundary inspection found only the scoped indexer production/tests,
+  corrected indexing product documentation, and this execution record; no
+  generated database, package-lock churn, tarball, or unrelated documentation
+  was present.
 
 ## Result
 
@@ -833,3 +855,11 @@ canonical physical-to-virtual scanning, cross-package reference extraction, and
 portable package-discovery fingerprint persistence. Published the product and
 story contract, then completed repository validation. This plan was promoted to
 `docs/plans/completed/` after the checks above passed.
+
+The 2026-07-24 final-review wave closed three incremental correctness gaps:
+fingerprint changes now trigger a truly fresh staged rebuild, manifest validity
+and direct dependency authority gate lock candidates, and ignores can exclude a
+whole canonical root before recursion. Regression coverage proves stale outgoing
+edges are replaced even when GUID/path/mtime identity is preserved, embedded and
+cache fallback remains available under manifest warnings, and ignored package
+roots emit neither nodes nor descendant warnings.

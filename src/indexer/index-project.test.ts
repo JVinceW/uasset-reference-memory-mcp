@@ -176,13 +176,81 @@ describe("indexProject incremental", () => {
     await projectManifest({ "com.company.gameplay": `file:${second}` });
     const summary = await indexProject(root, { dbPath });
     const store = GraphStore.open(dbPath);
+    const nextFingerprint = store.getMeta("package_discovery_fingerprint");
+    const secondNode = store.getNode("b".repeat(32));
+    const firstNode = store.getNode("a".repeat(32));
+    store.close();
 
     expect(summary.added).toBe(1);
-    expect(summary.removed).toBe(1);
-    expect(store.getMeta("package_discovery_fingerprint")).not.toBe(firstFingerprint);
-    expect(store.getNode("b".repeat(32))).not.toBeNull();
-    expect(store.getNode("a".repeat(32))).toBeNull();
+    expect(summary.removed).toBe(0);
+    expect(summary.unchanged).toBe(0);
+    expect(nextFingerprint).not.toBe(firstFingerprint);
+    expect(secondNode).not.toBeNull();
+    expect(firstNode).toBeNull();
+  });
+
+  test("freshly rebuilds outgoing edges when a retargeted package preserves asset identity and mtimes", async () => {
+    const packageName = "com.company.gameplay";
+    const sourceGuid = "a".repeat(32);
+    const firstTargetGuid = "b".repeat(32);
+    const secondTargetGuid = "c".repeat(32);
+    const referenceBody = (guid: string) =>
+      `%YAML 1.1\nPrefab:\n  m_Target: {fileID: 100100000, guid: ${guid}, type: 3}\n`;
+    const first = await externalPackage(packageName);
+    const second = join(root, "external", packageName, "retargeted");
+    await mkdir(second, { recursive: true });
+    await writeFile(
+      join(second, "package.json"),
+      JSON.stringify({ name: packageName, version: "1.0.0" }),
+    );
+    await packageAsset(
+      first,
+      "Runtime/Rules.prefab",
+      sourceGuid,
+      referenceBody(firstTargetGuid),
+    );
+    await packageAsset(
+      second,
+      "Runtime/Rules.prefab",
+      sourceGuid,
+      referenceBody(secondTargetGuid),
+    );
+    await writeAsset("Assets/First.prefab", firstTargetGuid);
+    await writeAsset("Assets/Second.prefab", secondTargetGuid);
+    const preserved = new Date(Date.now() - 60_000);
+    for (const packageRoot of [first, second]) {
+      await utimes(join(packageRoot, "Runtime", "Rules.prefab"), preserved, preserved);
+      await utimes(join(packageRoot, "Runtime", "Rules.prefab.meta"), preserved, preserved);
+    }
+
+    await projectManifest({ [packageName]: `file:${first}` });
+    await indexProject(root, { dbPath });
+    const firstStore = GraphStore.open(dbPath);
+    const firstFingerprint = firstStore.getMeta("package_discovery_fingerprint");
+    expect(firstStore.outgoingEdges(sourceGuid).map((edge) => edge.toGuid)).toEqual([
+      firstTargetGuid,
+    ]);
+    firstStore.close();
+
+    await projectManifest({ [packageName]: `file:${second}` });
+    const summary = await indexProject(root, { dbPath });
+    const store = GraphStore.open(dbPath);
+    const nextFingerprint = store.getMeta("package_discovery_fingerprint");
+    const sourceNode = store.getNode(sourceGuid);
+    const outgoingTargetGuids = store.outgoingEdges(sourceGuid).map((edge) => edge.toGuid);
     store.close();
+
+    expect(summary).toMatchObject({
+      added: 3,
+      updated: 0,
+      removed: 0,
+      unchanged: 0,
+    });
+    expect(nextFingerprint).not.toBe(firstFingerprint);
+    expect(sourceNode?.path).toBe(
+      "Packages/com.company.gameplay/Runtime/Rules.prefab",
+    );
+    expect(outgoingTargetGuids).toEqual([secondTargetGuid]);
   });
 
   test("counts a meta-only change as one updated logical asset", async () => {

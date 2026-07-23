@@ -61,13 +61,13 @@ export async function indexProject(
 
   await cleanupDbFiles(tempPath);
   const hasCurrentIndex = !opts.force && (await fileExists(dbPath));
-  const incremental =
+  let incremental =
     hasCurrentIndex &&
     GraphStore.readSchemaVersion(dbPath) === SCHEMA_VERSION &&
     !GraphStore.requiresLegacyRebuild(dbPath);
   if (incremental) await copyFile(dbPath, tempPath);
 
-  const store = GraphStore.open(tempPath);
+  let store = GraphStore.open(tempPath);
   try {
     // Fail loudly only when the whole project is ForceBinary. Incidental
     // always-binary assets (LightingData, NavMesh, ...) are skipped per-file.
@@ -77,6 +77,16 @@ export async function indexProject(
     const config = loadConfig(configPathFor(dbPath));
     const result = await scan(projectRoot, buildIgnore(config.scan));
     assertUniqueAssetGuids(result.nodes, BUILTIN_NODES);
+    if (
+      incremental &&
+      result.packageFingerprint &&
+      store.getMeta("package_discovery_fingerprint") !== result.packageFingerprint
+    ) {
+      store.close();
+      await cleanupDbFiles(tempPath);
+      store = GraphStore.open(tempPath);
+      incremental = false;
+    }
     // Built-in sentinel guids resolve against synthetic nodes so references to
     // them are edges, not broken refs (US-004). They are stored as infrastructure
     // but excluded from the user-facing change counts.
@@ -112,7 +122,7 @@ export async function indexProject(
     await swapIntoPlace(tempPath, dbPath);
     return summary;
   } catch (err) {
-    store.close();
+    if (store.db.open) store.close();
     await cleanupDbFiles(tempPath);
     throw err;
   }
