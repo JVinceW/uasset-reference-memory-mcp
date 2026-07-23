@@ -147,7 +147,7 @@ describe("indexProject incremental", () => {
   test("updates and removes external package assets incrementally", async () => {
     const external = await externalPackage("com.company.gameplay");
     await projectManifest({
-      "com.company.gameplay": `file:${external.replaceAll("\\\\", "/")}`,
+      "com.company.gameplay": `file:${external.replaceAll("\\", "/")}`,
     });
     await packageAsset(external, "Runtime/Rules.asset", "a".repeat(32), "value: 1");
     await indexProject(root, { dbPath });
