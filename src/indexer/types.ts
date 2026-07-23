@@ -22,6 +22,20 @@ export type AssetType = (typeof ASSET_TYPES)[number];
 
 export type Origin = "project" | "package" | "builtin";
 
+export interface ScanRoot {
+  physicalRoot: string;
+  /** Forward-slash Unity path used in the graph. */
+  virtualRoot: string;
+  origin: Exclude<Origin, "builtin">;
+  packageId: string | null;
+}
+
+export interface PackageDiscoveryResult {
+  roots: ScanRoot[];
+  warnings: ScanWarning[];
+  fingerprint: string;
+}
+
 /** One node in the asset graph, produced by the meta-scanner (US-001). */
 export interface AssetNode {
   guid: string;
@@ -39,6 +53,8 @@ export interface AssetNode {
   mtime: number;
   /** True when the asset cannot be scanned for outgoing guid references. */
   isBinary: boolean;
+  /** Physical path used only during this index run; never stored in SQLite. */
+  sourcePath?: string;
 }
 
 export const REF_KINDS = [
@@ -78,7 +94,8 @@ export type ScanWarningKind =
   | "invalid-meta"
   | "guid-replaced"
   | "unreadable-asset"
-  | "binary-serialized";
+  | "binary-serialized"
+  | "package-discovery";
 
 export interface ScanWarning {
   kind: ScanWarningKind;
@@ -90,4 +107,5 @@ export interface ScanWarning {
 export interface ScanResult {
   nodes: AssetNode[];
   warnings: ScanWarning[];
+  packageFingerprint?: string;
 }
