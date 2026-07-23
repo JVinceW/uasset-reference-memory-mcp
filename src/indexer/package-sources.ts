@@ -90,7 +90,12 @@ function parseJson<T>(text: string | null, name: "manifest" | "lockfile", warnin
     return {} as T;
   }
   try {
-    return JSON.parse(text) as T;
+    const parsed: unknown = JSON.parse(text);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      warnings.push({ kind: "package-discovery", path, message: `${name} must contain a JSON object` });
+      return {} as T;
+    }
+    return parsed as T;
   } catch {
     warnings.push({ kind: "package-discovery", path, message: `${name} contains malformed JSON` });
     return {} as T;

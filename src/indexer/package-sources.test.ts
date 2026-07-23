@@ -5,14 +5,16 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { discoverScanRoots } from "./package-sources.js";
 
 let root: string;
+let fixtureRoot: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "upm-package-sources-"));
+  fixtureRoot = await mkdtemp(join(tmpdir(), "upm-package-sources-"));
+  root = join(fixtureRoot, "project");
   await mkdir(join(root, "Assets"), { recursive: true });
 });
 
 afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+  await rm(fixtureRoot, { recursive: true, force: true });
 });
 
 async function writeProjectManifest(dependencies: Record<string, unknown>): Promise<void> {
@@ -135,6 +137,27 @@ describe("discoverScanRoots", () => {
     await writeFile(join(root, "Packages", "packages-lock.json"), "{");
 
     await expect(discoverScanRoots(root)).resolves.toMatchObject({ warnings: expect.arrayContaining([expect.objectContaining({ kind: "package-discovery", path: "Packages/packages-lock.json" })]) });
+  });
+
+  test("warns for a null manifest and retains embedded roots", async () => {
+    const embedded = await writeEmbeddedPackage("com.company.gameplay");
+    await writeFile(join(root, "Packages", "manifest.json"), "null");
+
+    const result = await discoverScanRoots(root);
+
+    expect(result.roots).toContainEqual(expect.objectContaining({ physicalRoot: embedded }));
+    expect(result.warnings).toContainEqual(expect.objectContaining({ kind: "package-discovery", path: "Packages/manifest.json" }));
+  });
+
+  test("warns for a null lockfile and retains cache roots", async () => {
+    await writeProjectManifest({});
+    const cached = await writeCachedPackage("com.company.gameplay@1.0.0", "com.company.gameplay");
+    await writeFile(join(root, "Packages", "packages-lock.json"), "null");
+
+    const result = await discoverScanRoots(root);
+
+    expect(result.roots).toContainEqual(expect.objectContaining({ physicalRoot: cached }));
+    expect(result.warnings).toContainEqual(expect.objectContaining({ kind: "package-discovery", path: "Packages/packages-lock.json" }));
   });
 
   test.each([
