@@ -9,6 +9,8 @@ to fill the directory.
 - `symphony-web-ui-controller.md` - Local Web UI controller for Harness Symphony
   task execution, review, dependency blocking, Codex event logs, PR review, and
   sync.
+- `reindexing-workflow.md` - Practical `index_project` refresh, recovery, and
+  GUID-identity workflow for users and agents.
 
 ## Update Rule
 
