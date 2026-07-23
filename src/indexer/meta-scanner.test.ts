@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
@@ -69,6 +69,27 @@ afterAll(async () => {
 });
 
 describe("scanProject", () => {
+  test("uses the newer asset or meta mtime for one logical node", async () => {
+    const caseRoot = await mkdtemp(join(tmpdir(), "asset-meta-mtime-"));
+    try {
+      await mkdir(join(caseRoot, "Assets"), { recursive: true });
+      const assetPath = join(caseRoot, "Assets/Config.asset");
+      await writeFile(assetPath, "%YAML 1.1\n--- !u!114 &1\n");
+      await writeFile(`${assetPath}.meta`, meta("1".repeat(32)));
+      const assetTime = new Date("2026-07-22T00:00:00.000Z");
+      const metaTime = new Date("2026-07-22T00:01:00.000Z");
+      await utimes(assetPath, assetTime, assetTime);
+      await utimes(`${assetPath}.meta`, metaTime, metaTime);
+
+      const scanned = await scanProject(caseRoot);
+
+      expect(scanned.nodes).toHaveLength(1);
+      expect(scanned.nodes[0]?.mtime).toBe(metaTime.getTime());
+    } finally {
+      await rm(caseRoot, { recursive: true, force: true });
+    }
+  });
+
   test("produces one node per asset that has a .meta", () => {
     expect(result.nodes.map((n) => n.name).sort()).toEqual(
       ["Materials", "Player.prefab", "Prefabs", "Widget.asset", "body.mat"].sort(),

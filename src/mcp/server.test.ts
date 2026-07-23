@@ -52,6 +52,14 @@ describe("MCP server", () => {
     );
     expect(names).toHaveLength(15);
 
+    const indexProjectTool = tools.find((tool) => tool.name === "index_project");
+    expect(indexProjectTool?.description).toMatch(/incremental/i);
+    expect(indexProjectTool?.description).toMatch(/force.*guaranteed/i);
+
+    const indexStatusTool = tools.find((tool) => tool.name === "index_status");
+    expect(indexStatusTool?.description).toMatch(/stored/i);
+    expect(indexStatusTool?.description).toMatch(/does not.*fresh/i);
+
     const getAddressableInfo = tools.find((tool) => tool.name === "get_addressable_info");
     expect(getAddressableInfo?.inputSchema).toMatchObject({
       type: "object",

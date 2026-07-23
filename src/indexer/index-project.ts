@@ -4,8 +4,9 @@ import { GraphStore } from "../store/graph-store.js";
 import { scanProject, buildIgnore } from "./meta-scanner.js";
 import { loadConfig, configPathFor } from "../config/project-config.js";
 import { BUILTIN_NODES } from "./builtins.js";
+import { assertUniqueAssetGuids } from "./guid-validation.js";
 import { readSerializationMode } from "./project-settings.js";
-import { extractReferences, kindFor, type Resolver } from "./ref-extractor.js";
+import { extractReferences, type Resolver } from "./ref-extractor.js";
 import {
   AddressableParseError,
   extractAddressableGroup,
@@ -61,7 +62,9 @@ export async function indexProject(
   await cleanupDbFiles(tempPath);
   const hasCurrentIndex = !opts.force && (await fileExists(dbPath));
   const incremental =
-    hasCurrentIndex && GraphStore.readSchemaVersion(dbPath) === SCHEMA_VERSION;
+    hasCurrentIndex &&
+    GraphStore.readSchemaVersion(dbPath) === SCHEMA_VERSION &&
+    !GraphStore.hasNonCanonicalAssetGuids(dbPath);
   if (incremental) await copyFile(dbPath, tempPath);
 
   const store = GraphStore.open(tempPath);
@@ -73,6 +76,7 @@ export async function indexProject(
     }
     const config = loadConfig(configPathFor(dbPath));
     const result = await scan(projectRoot, buildIgnore(config.scan));
+    assertUniqueAssetGuids(result.nodes, BUILTIN_NODES);
     // Built-in sentinel guids resolve against synthetic nodes so references to
     // them are edges, not broken refs (US-004). They are stored as infrastructure
     // but excluded from the user-facing change counts.
@@ -140,25 +144,53 @@ async function applyIncremental(
   resolve: Resolver,
   warnings: ScanWarning[],
 ): Promise<ChangeCounts> {
-  const prior = store.getNodeMtimes();
-  const currentPaths = new Set<string>();
+  const priorByPath = store.getNodeMtimes();
+  const priorByGuid = new Map<string, { path: string; mtime: number }>();
+  for (const [path, info] of priorByPath) {
+    priorByGuid.set(info.guid, { path, mtime: info.mtime });
+  }
+  const currentByGuid = new Map(nodes.map((node) => [node.guid, node]));
   const addedNodes: AssetNode[] = [];
   const updatedNodes: AssetNode[] = [];
   let unchanged = 0;
 
   for (const n of nodes) {
-    currentPaths.add(n.path);
-    const p = prior.get(n.path);
+    const p = priorByGuid.get(n.guid);
     if (!p) addedNodes.push(n);
-    else if (p.mtime !== n.mtime) updatedNodes.push(n);
+    else if (p.path !== n.path || p.mtime !== n.mtime) updatedNodes.push(n);
     else unchanged++;
   }
 
   const builtinGuids = new Set(BUILTIN_NODES.map((n) => n.guid));
   const removedGuids: string[] = [];
-  for (const [path, info] of prior) {
-    if (!currentPaths.has(path) && !builtinGuids.has(info.guid)) removedGuids.push(info.guid);
+  for (const guid of priorByGuid.keys()) {
+    if (!currentByGuid.has(guid) && !builtinGuids.has(guid)) removedGuids.push(guid);
   }
+
+  const addedByPath = new Map(addedNodes.map((node) => [node.path, node]));
+  for (const oldGuid of removedGuids) {
+    const path = priorByGuid.get(oldGuid)!.path;
+    const replacement = addedByPath.get(path);
+    if (replacement) {
+      warnings.push({
+        kind: "guid-replaced",
+        path,
+        message: `asset guid replaced at ${path}: ${oldGuid} -> ${replacement.guid}`,
+      });
+    }
+  }
+
+  const typeChangedTargetGuids = updatedNodes
+    .filter((node) => store.getNode(node.guid)?.assetType !== node.assetType)
+    .map((node) => node.guid);
+  const affectedSourceGuids = new Set([
+    ...store.incomingSourceGuids(typeChangedTargetGuids),
+    ...store.unresolvedSourceGuids(addedNodes.map((node) => node.guid)),
+  ]);
+  const currentNodesByGuid = new Map(nodes.map((node) => [node.guid, node]));
+  const affectedSourceNodes = [...affectedSourceGuids]
+    .map((guid) => currentNodesByGuid.get(guid))
+    .filter((node): node is AssetNode => node !== undefined);
 
   // Nodes: upsert changed, then handle removals (demote inbound, drop node).
   store.upsertNodes([...addedNodes, ...updatedNodes]);
@@ -166,10 +198,13 @@ async function applyIncremental(
   store.deleteOutgoing(removedGuids);
   store.deleteNodesByGuid(removedGuids);
 
-  // Edges: promote inbound for new targets, re-extract outbound for changed files.
-  for (const n of addedNodes) store.promoteUnresolved(n.guid, kindFor(n.assetType));
-  store.deleteOutgoing(updatedNodes.map((n) => n.guid));
-  const changed = [...addedNodes, ...updatedNodes];
+  // Edges: re-extract changed files and unchanged sources whose target type or
+  // resolution changed. Re-reading the source preserves full edge fidelity.
+  const changedByGuid = new Map(
+    [...addedNodes, ...updatedNodes, ...affectedSourceNodes].map((node) => [node.guid, node]),
+  );
+  const changed = [...changedByGuid.values()];
+  store.deleteOutgoing(changed.map((node) => node.guid));
   const { edges, unresolved, addressableGroups } = await extractAll(
     projectRoot,
     changed,

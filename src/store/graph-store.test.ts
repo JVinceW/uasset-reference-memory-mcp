@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { GraphStore } from "./graph-store.js";
 import { SCHEMA_VERSION } from "./schema.js";
@@ -60,6 +63,53 @@ describe("GraphStore schema", () => {
       ]),
     );
     store.close();
+  });
+});
+
+describe("GraphStore canonical guid detection", () => {
+  test("accepts an empty schema-3 store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "graph-store-guid-"));
+    const path = join(root, "index.db");
+    const store = GraphStore.open(path);
+    store.close();
+
+    try {
+      expect(GraphStore.hasNonCanonicalAssetGuids(path)).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("accepts canonical lowercase asset guids", async () => {
+    const root = await mkdtemp(join(tmpdir(), "graph-store-guid-"));
+    const path = join(root, "index.db");
+    const store = GraphStore.open(path);
+    store.upsertNodes([
+      node({ guid: "abcdef0123456789abcdef0123456789", path: "Assets/A.prefab" }),
+    ]);
+    store.close();
+
+    try {
+      expect(GraphStore.hasNonCanonicalAssetGuids(path)).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("detects uppercase asset guid identity", async () => {
+    const root = await mkdtemp(join(tmpdir(), "graph-store-guid-"));
+    const path = join(root, "index.db");
+    const store = GraphStore.open(path);
+    store.upsertNodes([
+      node({ guid: "ABCDEF0123456789ABCDEF0123456789", path: "Assets/A.prefab" }),
+    ]);
+    store.close();
+
+    try {
+      expect(GraphStore.hasNonCanonicalAssetGuids(path)).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
 

@@ -48,6 +48,18 @@ export class GraphStore implements QueryDb {
     }
   }
 
+  /** Whether a valid store contains pre-canonical uppercase asset identity. */
+  static hasNonCanonicalAssetGuids(path: string): boolean {
+    const db = new Database(path, { readonly: true, fileMustExist: true });
+    try {
+      return (
+        db.prepare("SELECT 1 FROM assets WHERE guid <> lower(guid) LIMIT 1").get() !== undefined
+      );
+    } finally {
+      db.close();
+    }
+  }
+
   close(): void {
     this.db.close();
   }
@@ -183,6 +195,31 @@ export class GraphStore implements QueryDb {
       .all(guid) as Edge[];
   }
 
+  /** Distinct sources with edges pointing at any of the given target guids. */
+  incomingSourceGuids(targetGuids: string[]): string[] {
+    return this.sourceGuidsForTargets("edges", targetGuids);
+  }
+
+  private sourceGuidsForTargets(
+    table: "edges" | "unresolved_refs",
+    targetGuids: string[],
+  ): string[] {
+    const sources = new Set<string>();
+    const chunkSize = 500;
+    for (let start = 0; start < targetGuids.length; start += chunkSize) {
+      const chunk = targetGuids.slice(start, start + chunkSize);
+      const placeholders = chunk.map(() => "?").join(", ");
+      const rows = this.db
+        .prepare(
+          `SELECT DISTINCT from_guid AS guid FROM ${table}
+           WHERE to_guid IN (${placeholders})`,
+        )
+        .all(...chunk) as { guid: string }[];
+      for (const row of rows) sources.add(row.guid);
+    }
+    return [...sources].sort();
+  }
+
   /** Remove all edges and unresolved refs originating from the given guids. */
   deleteOutgoing(guids: string[]): void {
     const delEdges = this.db.prepare("DELETE FROM edges WHERE from_guid = ?");
@@ -237,6 +274,11 @@ export class GraphStore implements QueryDb {
       for (const r of items) stmt.run(r.fromGuid, r.toGuid, r.context);
     });
     tx(refs);
+  }
+
+  /** Distinct sources with unresolved refs pointing at any given target guid. */
+  unresolvedSourceGuids(targetGuids: string[]): string[] {
+    return this.sourceGuidsForTargets("unresolved_refs", targetGuids);
   }
 
   unresolvedCount(): number {

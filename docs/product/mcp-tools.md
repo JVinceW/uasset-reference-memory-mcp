@@ -6,7 +6,7 @@ Fifteen tools. Naming mirrors `codebase-memory-mcp` so it feels familiar.
 
 | Tool | Behavior |
 | --- | --- |
-| `index_project(path, force?)` | Full scan and DB build. Default incremental mode re-parses only changed files. |
+| `index_project(path, force?)` | Explicit refresh. Default incremental mode re-parses assets whose effective asset/`.meta` timestamp or GUID path changed; `force: true` rebuilds for guaranteed freshness. |
 | `index_status()` | Stored index location, counts, and last-indexed time. Informational only; it does not scan live assets or prove freshness. |
 
 ## Core Queries
@@ -57,7 +57,11 @@ The full Addressables response and safety contract is documented in
   timestamp-preserving synchronization, restored backups/archives, or visible
   disagreement between Unity and the incremental graph.
 - Do not auto-loop on incomplete-pair warnings. Wait for Unity or source control
-  to stabilize, then retry.
+  to stabilize, then retry. Missing, orphaned, and invalid `.meta` pairs are
+  skipped without project-file repair; a previously indexed absent GUID becomes
+  unresolved until a complete pair returns.
+- Treat `guid-replaced` as a successful removal-plus-addition at one path, not a
+  move. GUID-preserving path changes are one update.
 - Stop on `DuplicateGuidError` and require the conflicting `.meta` files to be
   repaired before retrying.
 

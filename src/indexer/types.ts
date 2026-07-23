@@ -76,6 +76,7 @@ export type ScanWarningKind =
   | "orphan-meta"
   | "missing-meta"
   | "invalid-meta"
+  | "guid-replaced"
   | "unreadable-asset"
   | "binary-serialized";
 

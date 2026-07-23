@@ -51,6 +51,23 @@ describe("runTool", () => {
     expect(o.totalAssets).toBe(5);
   });
 
+  test("get_overview never invokes the indexer implicitly", async () => {
+    let indexCalls = 0;
+    const o = (await runTool(
+      {
+        ...ctx,
+        indexProject: async () => {
+          indexCalls++;
+          throw new Error("query invoked indexer");
+        },
+      },
+      "get_overview",
+    )) as { totalAssets: number };
+
+    expect(o.totalAssets).toBe(5);
+    expect(indexCalls).toBe(0);
+  });
+
   test("get_dependencies summarizes the forward subgraph", async () => {
     const r = (await runTool(ctx, "get_dependencies", { asset: "Assets/P.prefab", depth: -1 })) as {
       root: string; total: number;
