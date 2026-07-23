@@ -83,6 +83,30 @@ describe("discoverScanRoots", () => {
     expect(result.warnings).toContainEqual(expect.objectContaining({ kind: "package-discovery", path: "Packages/com.company.gameplay", message: expect.stringMatching(/name mismatch/i) }));
   });
 
+  test.each(["../outside", "com.company\\gameplay"])("skips a matching unsafe declared and package metadata name: %s", async (unsafeName) => {
+    const external = await writeExternalPackage("unsafe-package", unsafeName);
+    await writeProjectManifest({ [unsafeName]: `file:${external}` });
+
+    const result = await discoverScanRoots(root);
+
+    expect(result.roots).not.toContainEqual(expect.objectContaining({ physicalRoot: external }));
+    expect(result.roots.every((scanRoot) => !scanRoot.virtualRoot.includes("../") && !scanRoot.virtualRoot.includes("\\"))).toBe(true);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ kind: "package-discovery", path: "Packages", message: expect.stringMatching(/invalid package name/i) }));
+  });
+
+  test.each([
+    ["unsafe declared name", "../outside", "com.company.gameplay"],
+    ["unsafe package metadata name", "com.company.gameplay", "com.company\\gameplay"],
+  ])("uses a safe warning path for an %s", async (_caseName, declaredName, packageName) => {
+    const external = await writeExternalPackage("unsafe-package", packageName);
+    await writeProjectManifest({ [declaredName]: `file:${external}` });
+
+    const result = await discoverScanRoots(root);
+
+    expect(result.roots).not.toContainEqual(expect.objectContaining({ physicalRoot: external }));
+    expect(result.warnings).toContainEqual(expect.objectContaining({ kind: "package-discovery", path: "Packages", message: expect.stringMatching(/invalid package name/i) }));
+  });
+
   test("prefers embedded, then external, then cache for one package name", async () => {
     await writeEmbeddedPackage("com.company.gameplay");
     await writeExternalPackage("external-package", "com.company.gameplay");

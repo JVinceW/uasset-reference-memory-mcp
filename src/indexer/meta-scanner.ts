@@ -17,12 +17,19 @@ const NON_ASSET_FILES = new Set(["manifest.json", "packages-lock.json"]);
  * `cvs`, `.tmp`, and the package-manager manifests. Skipping them keeps
  * missing-meta warnings meaningful.
  */
-function isUnityIgnored(name: string): boolean {
+function isUnityIgnored(name: string, virtualPath: string): boolean {
   if (name.startsWith(".")) return true;
   if (name.endsWith("~")) return true;
   if (name.endsWith(".tmp")) return true;
+  if (name === "package.json" && isPackageRootMetadata(virtualPath)) return true;
   const lower = name.toLowerCase();
   return lower === "cvs" || NON_ASSET_FILES.has(lower);
+}
+
+function isPackageRootMetadata(virtualPath: string): boolean {
+  const segments = virtualPath.split("/");
+  return (segments.length === 3 && segments[0] === "Packages") ||
+    (segments.length === 4 && segments[0] === "Library" && segments[1] === "PackageCache");
 }
 
 /** Predicate deciding whether a directory entry is skipped during the scan. */
@@ -36,11 +43,11 @@ export interface ScanIgnoreConfig {
 /** Build the scan ignore predicate: built-in Unity rules + user glob patterns. */
 export function buildIgnore(config: ScanIgnoreConfig): IgnorePredicate {
   return (name, relPath) =>
-    (config.ignoreDefaults && isUnityIgnored(name)) ||
+    (config.ignoreDefaults && isUnityIgnored(name, relPath)) ||
     matchesAnyGlob(config.ignore, name, relPath);
 }
 
-const DEFAULT_IGNORE: IgnorePredicate = (name) => isUnityIgnored(name);
+const DEFAULT_IGNORE: IgnorePredicate = (name, relPath) => isUnityIgnored(name, relPath);
 
 /**
  * Walk a Unity project and produce one asset node per asset that carries a

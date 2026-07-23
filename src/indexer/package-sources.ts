@@ -19,6 +19,10 @@ export async function discoverScanRoots(projectRoot: string): Promise<PackageDis
 
   for (const entry of await childDirectories(packagesDir)) {
     const packageId = (await packageName(join(packagesDir, entry))) ?? entry;
+    if (!isPackageNameSegment(packageId)) {
+      warnings.push(invalidPackageNameWarning(packageId));
+      continue;
+    }
     roots.push(packageScanRoot(join(packagesDir, entry), packageId, false));
     claimedNonCache.add(packageId);
   }
@@ -29,8 +33,16 @@ export async function discoverScanRoots(projectRoot: string): Promise<PackageDis
     parseJson<Lockfile>(lockText, "lockfile", warnings, false),
   );
   for (const [declaredName, physicalRoot] of candidates) {
+    if (!isPackageNameSegment(declaredName)) {
+      warnings.push(invalidPackageNameWarning(declaredName));
+      continue;
+    }
     if (claimedNonCache.has(declaredName)) continue;
     const actualName = await packageName(physicalRoot);
+    if (actualName !== null && !isPackageNameSegment(actualName)) {
+      warnings.push(invalidPackageNameWarning(actualName));
+      continue;
+    }
     if (actualName !== declaredName) {
       warnings.push(packageWarning(
         declaredName,
@@ -47,7 +59,16 @@ export async function discoverScanRoots(projectRoot: string): Promise<PackageDis
   const cacheDir = join(projectRoot, "Library", "PackageCache");
   for (const entry of await childDirectories(cacheDir)) {
     const physicalRoot = join(cacheDir, entry);
-    const activeName = (await packageName(physicalRoot)) ?? stripCacheVersion(entry);
+    const declaredPackageName = await packageName(physicalRoot);
+    if (declaredPackageName !== null && !isPackageNameSegment(declaredPackageName)) {
+      warnings.push(invalidPackageNameWarning(declaredPackageName));
+      continue;
+    }
+    if (!isPackageNameSegment(entry)) {
+      warnings.push(invalidPackageNameWarning(entry));
+      continue;
+    }
+    const activeName = declaredPackageName ?? stripCacheVersion(entry);
     if (claimedNonCache.has(activeName)) continue;
     roots.push(packageScanRoot(physicalRoot, entry, true));
   }
@@ -153,8 +174,21 @@ function stripCacheVersion(name: string): string {
   return at > 0 ? name.slice(0, at) : name;
 }
 
+function isPackageNameSegment(name: string): boolean {
+  return name.length > 0 && name !== "." && name !== ".." && !/[\\/\u0000-\u001F\u007F]/.test(name);
+}
+
+function invalidPackageNameWarning(name: string): ScanWarning {
+  return packageWarning(name, "invalid package name");
+}
+
 function packageWarning(name: string, detail: string): ScanWarning {
-  return { kind: "package-discovery", path: `Packages/${name}`, message: `Package ${name}: ${detail}` };
+  const validName = isPackageNameSegment(name);
+  return {
+    kind: "package-discovery",
+    path: validName ? `Packages/${name}` : "Packages",
+    message: validName ? `Package ${name}: ${detail}` : `Package: ${detail}`,
+  };
 }
 
 async function isDirectory(path: string): Promise<boolean> {

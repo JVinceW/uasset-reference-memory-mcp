@@ -90,6 +90,25 @@ afterAll(async () => {
 });
 
 describe("scanProject", () => {
+  test("indexes an Assets package.json when it has a meta", async () => {
+    const caseRoot = await mkdtemp(join(tmpdir(), "asset-package-json-"));
+    try {
+      const assetPath = join(caseRoot, "Assets", "Configuration", "package.json");
+      await mkdir(join(assetPath, ".."), { recursive: true });
+      await writeFile(assetPath, "{}");
+      await writeFile(`${assetPath}.meta`, meta("9".repeat(32)));
+
+      const scanned = await scanProject(caseRoot);
+
+      expect(scanned.nodes).toContainEqual(expect.objectContaining({
+        guid: "9".repeat(32),
+        path: "Assets/Configuration/package.json",
+      }));
+    } finally {
+      await rm(caseRoot, { recursive: true, force: true });
+    }
+  });
+
   test("maps an external package physical root to a canonical Unity path", async () => {
     const external = await writeExternalPackage("com.company.gameplay");
     await writeProjectManifest({
@@ -107,6 +126,10 @@ describe("scanProject", () => {
       sourcePath: join(external, "Runtime", "Rules.asset"),
     });
     expect(scanned.packageFingerprint).toMatch(/^[0-9a-f]{64}$/);
+    expect(scanned.warnings).not.toContainEqual(expect.objectContaining({
+      kind: "missing-meta",
+      path: "Packages/com.company.gameplay/package.json",
+    }));
   });
 
   test("uses the newer asset or meta mtime for one logical node", async () => {
