@@ -2,14 +2,11 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { classifyAssetType, isYamlAsset } from "./asset-type.js";
 import { parseGuid, parseImporterType } from "./meta-parse.js";
-import { classifyOrigin, parsePackageId } from "./origin.js";
+import { discoverScanRoots } from "./package-sources.js";
 import { matchesAnyGlob } from "../config/glob.js";
-import type { AssetNode, ScanResult, ScanWarning } from "./types.js";
+import type { AssetNode, ScanResult, ScanRoot, ScanWarning } from "./types.js";
 
 const META_SUFFIX = ".meta";
-
-/** The Unity source roots we scan, relative to the project root. */
-const SCAN_ROOTS = ["Assets", "Packages", "Library/PackageCache"];
 
 /** Package-manager files at the Packages root that are not Unity assets. */
 const NON_ASSET_FILES = new Set(["manifest.json", "packages-lock.json"]);
@@ -55,39 +52,48 @@ export async function scanProject(
   ignore: IgnorePredicate = DEFAULT_IGNORE,
 ): Promise<ScanResult> {
   const nodes: AssetNode[] = [];
-  const warnings: ScanWarning[] = [];
+  const discovery = await discoverScanRoots(projectRoot);
+  const warnings = [...discovery.warnings];
 
-  for (const rel of SCAN_ROOTS) {
-    const abs = join(projectRoot, rel);
-    if (await isDirectory(abs)) {
-      await walk(projectRoot, rel, nodes, warnings, ignore);
-    }
+  for (const root of discovery.roots) {
+    await walk(root, "", nodes, warnings, ignore);
   }
 
-  return { nodes, warnings };
+  return {
+    nodes,
+    warnings,
+    packageFingerprint: discovery.fingerprint,
+  };
 }
 
 async function walk(
-  projectRoot: string,
-  relDir: string,
+  root: ScanRoot,
+  relativeDir: string,
   nodes: AssetNode[],
   warnings: ScanWarning[],
   ignore: IgnorePredicate,
 ): Promise<void> {
-  const entries = await readdir(join(projectRoot, relDir), { withFileTypes: true });
+  const sourceDirectory = relativeDir
+    ? join(root.physicalRoot, relativeDir)
+    : root.physicalRoot;
+  const virtualDirectory = relativeDir
+    ? `${root.virtualRoot}/${relativeDir.replaceAll("\\", "/")}`
+    : root.virtualRoot;
+  const entries = await readdir(sourceDirectory, { withFileTypes: true });
   const names = new Set(entries.map((e) => e.name));
 
   for (const entry of entries) {
-    const relPath = `${relDir}/${entry.name}`;
-    if (ignore(entry.name, relPath)) continue;
+    const relativePath = relativeDir ? `${relativeDir}/${entry.name}` : entry.name;
+    const virtualPath = `${virtualDirectory}/${entry.name.replaceAll("\\", "/")}`;
+    if (ignore(entry.name, virtualPath)) continue;
 
     if (entry.name.endsWith(META_SUFFIX)) {
       const assetName = entry.name.slice(0, -META_SUFFIX.length);
       if (!names.has(assetName)) {
         warnings.push({
           kind: "orphan-meta",
-          path: `${relDir}/${assetName}`,
-          message: `.meta has no matching asset: ${relDir}/${assetName}`,
+          path: virtualPath.slice(0, -META_SUFFIX.length),
+          message: `.meta has no matching asset: ${virtualPath.slice(0, -META_SUFFIX.length)}`,
         });
       }
       continue;
@@ -97,60 +103,54 @@ async function walk(
     if (!names.has(entry.name + META_SUFFIX)) {
       warnings.push({
         kind: "missing-meta",
-        path: relPath,
-        message: `asset has no .meta: ${relPath}`,
+        path: virtualPath,
+        message: `asset has no .meta: ${virtualPath}`,
       });
     } else {
-      const node = await buildNode(projectRoot, relPath, entry.isDirectory(), warnings);
+      const node = await buildNode(root, relativePath, entry.isDirectory(), warnings);
       if (node) nodes.push(node);
     }
 
     if (entry.isDirectory()) {
-      await walk(projectRoot, relPath, nodes, warnings, ignore);
+      await walk(root, relativePath, nodes, warnings, ignore);
     }
   }
 }
 
 async function buildNode(
-  projectRoot: string,
-  relPath: string,
+  root: ScanRoot,
+  relativePath: string,
   isDir: boolean,
   warnings: ScanWarning[],
 ): Promise<AssetNode | null> {
-  const assetPath = join(projectRoot, relPath);
-  const metaPath = `${assetPath}${META_SUFFIX}`;
+  const sourcePath = join(root.physicalRoot, relativePath);
+  const virtualPath = `${root.virtualRoot}/${relativePath.replaceAll("\\", "/")}`;
+  const metaPath = `${sourcePath}${META_SUFFIX}`;
   const metaContent = await readFile(metaPath, "utf8");
   const guid = parseGuid(metaContent);
   if (!guid) {
     warnings.push({
       kind: "invalid-meta",
-      path: relPath,
-      message: `.meta has no parseable guid: ${relPath}${META_SUFFIX}`,
+      path: virtualPath,
+      message: `.meta has no parseable guid: ${virtualPath}${META_SUFFIX}`,
     });
     return null;
   }
 
-  const [info, metaInfo] = await Promise.all([stat(assetPath), stat(metaPath)]);
+  const [info, metaInfo] = await Promise.all([stat(sourcePath), stat(metaPath)]);
   const importerType = isDir ? "folder" : parseImporterType(metaContent);
-  const name = relPath.slice(relPath.lastIndexOf("/") + 1);
+  const name = virtualPath.slice(virtualPath.lastIndexOf("/") + 1);
 
   return {
     guid,
-    path: relPath,
+    path: virtualPath,
     name,
-    assetType: classifyAssetType(relPath, importerType),
-    origin: classifyOrigin(relPath),
-    packageId: parsePackageId(relPath),
+    assetType: classifyAssetType(virtualPath, importerType),
+    origin: root.origin,
+    packageId: root.packageId,
     fileSize: isDir ? null : info.size,
     mtime: Math.max(Math.floor(info.mtimeMs), Math.floor(metaInfo.mtimeMs)),
-    isBinary: isDir ? true : !isYamlAsset(relPath),
+    isBinary: isDir ? true : !isYamlAsset(virtualPath),
+    sourcePath,
   };
-}
-
-async function isDirectory(absPath: string): Promise<boolean> {
-  try {
-    return (await stat(absPath)).isDirectory();
-  } catch {
-    return false;
-  }
 }

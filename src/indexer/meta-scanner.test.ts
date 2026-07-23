@@ -14,13 +14,34 @@ function meta(guid: string, opts: { folder?: boolean; importer?: string } = {}):
 }
 
 let root: string;
+let fixtureRoot: string;
 let result: ScanResult;
+
+async function writeProjectManifest(dependencies: Record<string, string>): Promise<void> {
+  await mkdir(join(root, "Packages"), { recursive: true });
+  await writeFile(join(root, "Packages", "manifest.json"), JSON.stringify({ dependencies }));
+}
+
+async function writeExternalPackage(name: string): Promise<string> {
+  const external = join(root, "..", name);
+  await mkdir(external, { recursive: true });
+  await writeFile(join(external, "package.json"), JSON.stringify({ name, version: "1.0.0" }));
+  return external;
+}
+
+async function writePackageAsset(packageRoot: string, path: string, guid: string): Promise<void> {
+  const assetPath = join(packageRoot, path);
+  await mkdir(join(assetPath, ".."), { recursive: true });
+  await writeFile(assetPath, "%YAML 1.1\n--- !u!114 &1\n");
+  await writeFile(`${assetPath}.meta`, meta(guid, { importer: "NativeFormatImporter" }));
+}
 
 const byName = (name: string): AssetNode | undefined =>
   result.nodes.find((n) => n.name === name);
 
 beforeAll(async () => {
-  root = await mkdtemp(join(tmpdir(), "asset-scan-"));
+  fixtureRoot = await mkdtemp(join(tmpdir(), "asset-scan-"));
+  root = join(fixtureRoot, "project");
 
   // Assets/Prefabs/Player.prefab (+ folder meta for Prefabs)
   await mkdir(join(root, "Assets/Prefabs"), { recursive: true });
@@ -58,17 +79,36 @@ beforeAll(async () => {
   await writeFile(join(root, "Packages/com.foo.bar/Widget.asset"), "%YAML 1.1\n--- !u!114 &3\n");
   await writeFile(
     join(root, "Packages/com.foo.bar/Widget.asset.meta"),
-    meta("f".repeat(32), { importer: "NativeFormatImporter" }),
+    meta("0".repeat(32), { importer: "NativeFormatImporter" }),
   );
 
   result = await scanProject(root);
 }, 20_000);
 
 afterAll(async () => {
-  if (root) await rm(root, { recursive: true, force: true });
+  if (fixtureRoot) await rm(fixtureRoot, { recursive: true, force: true });
 });
 
 describe("scanProject", () => {
+  test("maps an external package physical root to a canonical Unity path", async () => {
+    const external = await writeExternalPackage("com.company.gameplay");
+    await writeProjectManifest({
+      "com.company.gameplay": `file:${external.replaceAll("\\", "/")}`,
+    });
+    await writePackageAsset(external, "Runtime/Rules.asset", "f".repeat(32));
+
+    const scanned = await scanProject(root);
+    const node = scanned.nodes.find((candidate) => candidate.guid === "f".repeat(32));
+
+    expect(node).toMatchObject({
+      path: "Packages/com.company.gameplay/Runtime/Rules.asset",
+      origin: "package",
+      packageId: "com.company.gameplay",
+      sourcePath: join(external, "Runtime", "Rules.asset"),
+    });
+    expect(scanned.packageFingerprint).toMatch(/^[0-9a-f]{64}$/);
+  });
+
   test("uses the newer asset or meta mtime for one logical node", async () => {
     const caseRoot = await mkdtemp(join(tmpdir(), "asset-meta-mtime-"));
     try {
