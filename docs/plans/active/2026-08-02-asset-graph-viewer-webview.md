@@ -172,8 +172,8 @@ Responsibilities:
 
 ## Progress
 
-- [ ] Phase 0: Verify current readiness and lock implementation decisions.
-- [ ] Phase 1: Add the frontend build harness without changing behavior.
+- [x] Phase 0: Verify current readiness and lock implementation decisions.
+- [x] Phase 1: Add the frontend build harness without changing behavior.
 - [ ] Phase 2: Extend and test the shared web API contract.
 - [ ] Phase 3: Implement design tokens, shell, and loading states.
 - [ ] Phase 4: Implement the real 2D graph workbench.
@@ -187,31 +187,31 @@ Responsibilities:
 
 ### Phase 0: Verify Readiness And Decisions
 
-- [ ] Run `git status --short` and preserve unrelated user changes.
-- [ ] Confirm the handoff files are present:
+- [x] Run `git status --short` and preserve unrelated user changes.
+- [x] Confirm the handoff files are present:
   `README.md`, `TECH_STACK.md`, `Asset Graph Viewer.dc.html`, and `support.js`.
-- [ ] Confirm `npm run typecheck` and `npm test` pass before implementation.
-- [ ] Record decisions for first shipment:
+- [x] Confirm `npm run typecheck` and `npm test` pass before implementation.
+- [x] Record decisions for first shipment:
   2D workbench required, trace required, search required, query drawer optional
   until product policy is settled, DAG optional, 3D optional.
-- [ ] Decide whether the old Cytoscape viewer remains available temporarily as
+- [x] Decide whether the old Cytoscape viewer remains available temporarily as
   `/legacy.html` during migration.
 
 ### Phase 1: Add The Frontend Build Harness
 
-- [ ] Add dependencies consistent with the handoff:
+- [x] Add dependencies consistent with the handoff:
   `vite`, `@vitejs/plugin-react`, `react`, `react-dom`, `@types/react`,
   `@types/react-dom`, `zustand`, `@tanstack/react-query`,
   `@tanstack/react-table`, `@tanstack/react-virtual`, `graphology`, `sigma`,
   `graphology-layout-forceatlas2`, `lucide-react`,
   `@fontsource/ibm-plex-sans`, and `@fontsource/ibm-plex-mono`.
-- [ ] Add Playwright only when the first browser validation spec is introduced.
-- [ ] Add `src/web/viewer/index.html` and `src/web/viewer/main.tsx`.
-- [ ] Change build scripts so `npm run build` runs TypeScript and Vite, then
+- [x] Add Playwright only when the first browser validation spec is introduced.
+- [x] Add `src/web/viewer/index.html` and `src/web/viewer/main.tsx`.
+- [x] Change build scripts so `npm run build` runs TypeScript and Vite, then
   copies required static compatibility files and WASM assets into
   `dist/web/public/`.
-- [ ] Preserve `unity-asset-reference-mcp-web` as the server bin.
-- [ ] Validate with `npm run typecheck` and `npm run build`.
+- [x] Preserve `unity-asset-reference-mcp-web` as the server bin.
+- [x] Validate with `npm run typecheck` and `npm run build`.
 
 ### Phase 2: Extend The Shared Web API Contract
 
@@ -342,6 +342,9 @@ Responsibilities:
   authority.
 - 2026-08-02: Defer 3D mode unless core 2D workbench behavior is already
   validated.
+- 2026-08-02: Keep the current Cytoscape viewer as the default shipped web
+  entry during the first build-harness slice; emit the new React workbench to
+  `dist/web/public/viewer-next/` until graph parity is ready.
 
 ## Validation
 
@@ -359,4 +362,15 @@ Responsibilities:
 
 ## Result
 
-Complete after implementation and validation.
+2026-08-02 implementation start:
+
+- Created branch/worktree `feature/asset-graph-viewer-webview` at
+  `.worktrees/asset-graph-viewer-webview`.
+- Baseline validation before implementation: `npm run typecheck` passed and
+  `npm test` passed with 39 test files and 298 tests.
+- Phase 1 added the Vite/React browser build harness, design-token shell,
+  initial HTTP `GraphSource`, and self-hosted IBM Plex font imports.
+- Phase 1 validation: `npm run typecheck` passed; `npm run build` passed and
+  emitted the new viewer to `dist/web/public/viewer-next/`.
+
+Complete after the full implementation and validation.
