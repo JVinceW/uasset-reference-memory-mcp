@@ -20,8 +20,8 @@ export function searchAssets(db: QueryDb, filters: SearchFilters = {}): AssetNod
   const inbound = "(SELECT COUNT(*) FROM edges WHERE to_guid = a.guid)";
 
   if (filters.name) {
-    where.push("a.name LIKE ?");
-    params.push(`%${filters.name}%`);
+    where.push("(a.name LIKE ? OR a.path LIKE ? OR a.guid LIKE ?)");
+    params.push(`%${filters.name}%`, `%${filters.name}%`, `${filters.name}%`);
   }
   if (filters.type) {
     where.push("a.asset_type = ?");

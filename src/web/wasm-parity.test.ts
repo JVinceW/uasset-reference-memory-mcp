@@ -48,9 +48,14 @@ describe("query layer parity: better-sqlite3 vs sql.js (WASM)", () => {
     const wasm = wasmDb(new SQL.Database(store.db.serialize()));
 
     for (const [path, params] of [
+      ["/api/index-status", {}],
       ["/api/overview", {}],
       ["/api/search", { type: "Material" }],
+      ["/api/search", { name: g("b").slice(0, 8) }],
+      ["/api/asset-detail", { ref: "Assets/B.mat" }],
+      ["/api/graph", { origins: "project", limit: "2" }],
       ["/api/neighborhood", { ref: "Assets/A.prefab", dir: "deps", depth: "2" }],
+      ["/api/root-trace", { ref: "Assets/C.png", dir: "refs", depth: "2" }],
       ["/api/trace", { from: "Assets/A.prefab", to: "Assets/C.png" }],
     ] as const) {
       const server = handleApi(store, path, params);

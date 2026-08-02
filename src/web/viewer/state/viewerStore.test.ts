@@ -13,6 +13,7 @@ function resetStore(): void {
     typeFilters: allEnabled<AssetType>(ASSET_TYPES),
     originFilters: allEnabled<Origin>(ORIGINS),
     nodeBudget: 320,
+    traceDir: "deps",
     selectedRef: null,
     hoverGuid: null,
     searchTerm: "",
@@ -75,5 +76,13 @@ describe("viewerStore", () => {
       searchTerm: "",
       searchOpen: false,
     });
+  });
+
+  test("node budget is clamped for viewer requests", () => {
+    useViewerStore.getState().setNodeBudget(12);
+    expect(useViewerStore.getState().nodeBudget).toBe(50);
+
+    useViewerStore.getState().setNodeBudget(9999);
+    expect(useViewerStore.getState().nodeBudget).toBe(5000);
   });
 });

@@ -1,15 +1,23 @@
 import type { GraphSource } from "./GraphSource";
 import type {
   AssetNode,
+  AssetDetail,
   EdgeDetail,
   EdgeFilters,
+  GraphFilters,
+  IndexStatus,
   Neighborhood,
   Overview,
+  RootTrace,
   SearchFilters,
   UnusedFilters,
 } from "./apiTypes";
 
 export class HttpGraphSource implements GraphSource {
+  async getIndexStatus(): Promise<IndexStatus> {
+    return this.get("/api/index-status", {});
+  }
+
   async getOverview(): Promise<Overview> {
     return this.get("/api/overview", {});
   }
@@ -22,6 +30,18 @@ export class HttpGraphSource implements GraphSource {
     return this.get("/api/resolve", { ref });
   }
 
+  async getAssetDetail(ref: string): Promise<AssetDetail> {
+    return this.get("/api/asset-detail", { ref });
+  }
+
+  async getGraph(filters: GraphFilters): Promise<Neighborhood> {
+    return this.get("/api/graph", {
+      ...filters,
+      types: filters.types?.join(","),
+      origins: filters.origins?.join(","),
+    });
+  }
+
   async getNeighborhood(ref: string, dir: "deps" | "refs", depth: number): Promise<Neighborhood> {
     return this.get("/api/neighborhood", { ref, dir, depth });
   }
@@ -32,6 +52,10 @@ export class HttpGraphSource implements GraphSource {
 
   async tracePath(from: string, to: string): Promise<Neighborhood> {
     return this.get("/api/trace", { from, to });
+  }
+
+  async getRootTrace(ref: string, dir: "deps" | "refs", depth: number, limit: number): Promise<RootTrace> {
+    return this.get("/api/root-trace", { ref, dir, depth, limit });
   }
 
   async getUnused(filters: UnusedFilters): Promise<AssetNode[]> {

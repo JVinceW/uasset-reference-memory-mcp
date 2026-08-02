@@ -14,6 +14,20 @@ export interface TopReferencedAsset {
   refCount: number;
 }
 
+export interface IndexStatus {
+  schemaVersion: string | null;
+  expectedSchemaVersion: number;
+  projectRoot: string | null;
+  indexedAt: string | null;
+  assetCount: number;
+  edgeCount: number;
+  unresolvedCount: number;
+  addressableCount: number;
+  packagesLockMtime: string | null;
+  packageDiscoveryFingerprint: string | null;
+  unityVersion: string | null;
+}
+
 export type AssetType =
   | "Prefab"
   | "Scene"
@@ -63,6 +77,9 @@ export interface CyNode {
     origin: Origin;
     path: string;
     distance: number;
+    degree?: number;
+    inbound?: number;
+    outbound?: number;
   };
 }
 
@@ -73,6 +90,8 @@ export interface CyEdge {
     target: string;
     kind: string;
     context: string | null;
+    fileId?: string | null;
+    count?: number;
   };
 }
 
@@ -80,6 +99,14 @@ export interface Neighborhood {
   rootId: string;
   nodes: CyNode[];
   edges: CyEdge[];
+  totalCandidates?: number;
+  truncated?: boolean;
+}
+
+export interface RootTrace extends Neighborhood {
+  dir: "deps" | "refs";
+  depth: number;
+  byDistance: Record<string, number>;
 }
 
 export interface EdgeDetail {
@@ -95,6 +122,22 @@ export interface EdgeFilters {
   from?: string;
   to?: string;
   kind?: string;
+  limit?: number;
+}
+
+export interface AssetDetail {
+  asset: AssetNode;
+  inbound: EdgeDetail[];
+  outbound: EdgeDetail[];
+  inboundCount: number;
+  outboundCount: number;
+}
+
+export interface GraphFilters {
+  types?: AssetType[];
+  origins?: Origin[];
+  pathPrefix?: string;
+  hideBuiltin?: boolean;
   limit?: number;
 }
 

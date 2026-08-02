@@ -5,6 +5,12 @@ import { findUnusedAssets } from "../query/unused.js";
 import { tracePath, type TracedPath } from "../query/trace.js";
 import { getOverview, searchAssets } from "../query/search.js";
 import type { AssetType, Origin } from "../indexer/types.js";
+import {
+  getAssetDetail,
+  getBudgetedGraph,
+  getIndexStatus,
+  getRootTrace,
+} from "../query/viewer.js";
 
 export interface ApiResponse {
   status: number;
@@ -20,6 +26,9 @@ type Params = Record<string, string | undefined>;
  */
 export function handleApi(db: QueryDb, pathname: string, params: Params): ApiResponse {
   switch (pathname) {
+    case "/api/index-status":
+      return ok(getIndexStatus(db));
+
     case "/api/overview":
       return ok(getOverview(db));
 
@@ -43,6 +52,24 @@ export function handleApi(db: QueryDb, pathname: string, params: Params): ApiRes
         : { status: 404, body: { error: r.reason, candidates: r.candidates ?? [] } };
     }
 
+    case "/api/asset-detail": {
+      const detail = getAssetDetail(db, params.ref ?? "", intOrUndef(params.limit) ?? 100);
+      return detail
+        ? ok(detail)
+        : { status: 404, body: { error: "not-found" } };
+    }
+
+    case "/api/graph":
+      return ok(
+        getBudgetedGraph(db, {
+          types: listParam(params.types) as AssetType[] | undefined,
+          origins: listParam(params.origins) as Origin[] | undefined,
+          pathPrefix: params.pathPrefix,
+          hideBuiltin: boolParam(params.hideBuiltin),
+          limit: intOrUndef(params.limit),
+        }),
+      );
+
     case "/api/neighborhood": {
       const ref = params.ref ?? "";
       const resolved = resolveRef(db, ref);
@@ -55,6 +82,20 @@ export function handleApi(db: QueryDb, pathname: string, params: Params): ApiRes
           ? findReferences(db, ref, depth)
           : getDependencies(db, ref, depth);
       return ok(toCyElements(sub!));
+    }
+
+    case "/api/root-trace": {
+      const dir = params.dir === "refs" ? "refs" : "deps";
+      const trace = getRootTrace(
+        db,
+        params.ref ?? "",
+        dir,
+        intOrUndef(params.depth) ?? 5,
+        intOrUndef(params.limit) ?? 320,
+      );
+      return trace
+        ? ok(trace)
+        : { status: 404, body: { error: "not-found" } };
     }
 
     case "/api/edges":
@@ -91,6 +132,16 @@ function intOrUndef(v: string | undefined): number | undefined {
   return Number.isNaN(n) ? undefined : n;
 }
 
+function listParam(v: string | undefined): string[] | undefined {
+  const values = v?.split(",").map((item) => item.trim()).filter(Boolean);
+  return values && values.length > 0 ? values : undefined;
+}
+
+function boolParam(v: string | undefined): boolean | undefined {
+  if (v === undefined) return undefined;
+  return v === "true" || v === "1";
+}
+
 export interface CyElements {
   rootId: string;
   nodes: { data: Record<string, unknown> }[];
@@ -118,6 +169,8 @@ export function toCyElements(sub: Subgraph): CyElements {
         target: e.toGuid,
         kind: e.refKind,
         context: e.context,
+        fileId: e.fileId,
+        count: e.count,
       },
     })),
   };
@@ -136,6 +189,8 @@ function pathToCyElements(path: TracedPath): CyElements {
         target: e.toGuid,
         kind: e.refKind,
         context: e.context,
+        fileId: e.fileId,
+        count: e.count,
       },
     })),
   };

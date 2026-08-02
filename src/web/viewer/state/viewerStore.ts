@@ -3,6 +3,7 @@ import type { AssetType, Origin } from "../data/apiTypes";
 
 export type Engine = "2d" | "3d" | "dag";
 export type Theme = "light" | "dark" | "system";
+export type TraceDir = "deps" | "refs";
 
 export const ASSET_TYPES: AssetType[] = [
   "Scene",
@@ -33,6 +34,7 @@ export interface ViewerState {
   typeFilters: Record<AssetType, boolean>;
   originFilters: Record<Origin, boolean>;
   nodeBudget: number;
+  traceDir: TraceDir;
   selectedRef: string | null;
   hoverGuid: string | null;
   searchTerm: string;
@@ -44,6 +46,7 @@ export interface ViewerState {
   toggleType(type: AssetType): void;
   toggleOrigin(origin: Origin): void;
   setNodeBudget(nodeBudget: number): void;
+  setTraceDir(traceDir: TraceDir): void;
   setHoverGuid(guid: string | null): void;
   setSearchTerm(term: string): void;
   setSearchOpen(open: boolean): void;
@@ -57,6 +60,7 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
   typeFilters: activeTypes,
   originFilters: activeOrigins,
   nodeBudget: 320,
+  traceDir: "deps",
   selectedRef: null,
   hoverGuid: null,
   searchTerm: "",
@@ -73,7 +77,9 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
     set((state) => ({
       originFilters: { ...state.originFilters, [origin]: !state.originFilters[origin] },
     })),
-  setNodeBudget: (nodeBudget) => set({ nodeBudget }),
+  setNodeBudget: (nodeBudget) =>
+    set({ nodeBudget: Number.isFinite(nodeBudget) ? Math.max(50, Math.min(5000, Math.trunc(nodeBudget))) : 320 }),
+  setTraceDir: (traceDir) => set({ traceDir }),
   setHoverGuid: (hoverGuid) => set({ hoverGuid }),
   setSearchTerm: (searchTerm) => set({ searchTerm, searchOpen: searchTerm.trim().length > 0 }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),

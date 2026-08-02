@@ -1,10 +1,10 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, Copy, Database, Moon, RefreshCw, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, JSX } from "react";
-import type { AssetNode, AssetType, CyEdge, CyNode, EdgeDetail, Origin, Overview } from "./data/apiTypes";
+import type { AssetNode, AssetType, CyEdge, CyNode, EdgeDetail, Neighborhood, Origin, Overview } from "./data/apiTypes";
 import { HttpGraphSource } from "./data/HttpGraphSource";
-import { ASSET_TYPES, ORIGINS, useViewerStore, type Engine, type Theme } from "./state/viewerStore";
+import { ASSET_TYPES, ORIGINS, useViewerStore, type Engine, type Theme, type TraceDir } from "./state/viewerStore";
 import { fmtBytes, fmtNumber, shortGuid } from "./utils/format";
 
 const source = new HttpGraphSource();
@@ -35,6 +35,10 @@ export function App(): JSX.Element {
   const toggleType = useViewerStore((state) => state.toggleType);
   const originFilters = useViewerStore((state) => state.originFilters);
   const toggleOrigin = useViewerStore((state) => state.toggleOrigin);
+  const nodeBudget = useViewerStore((state) => state.nodeBudget);
+  const setNodeBudget = useViewerStore((state) => state.setNodeBudget);
+  const traceDir = useViewerStore((state) => state.traceDir);
+  const setTraceDir = useViewerStore((state) => state.setTraceDir);
   const selectedRef = useViewerStore((state) => state.selectedRef);
   const selectRef = useViewerStore((state) => state.selectRef);
   const searchTerm = useViewerStore((state) => state.searchTerm);
@@ -44,6 +48,11 @@ export function App(): JSX.Element {
   const goHistory = useViewerStore((state) => state.goHistory);
   const historyIndex = useViewerStore((state) => state.historyIndex);
   const history = useViewerStore((state) => state.history);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const activeTypes = useMemo(
+    () => ASSET_TYPES.filter((type) => typeFilters[type]),
+    [typeFilters],
+  );
   const activeOrigins = useMemo(
     () => ORIGINS.filter((origin) => originFilters[origin]),
     [originFilters],
@@ -58,39 +67,42 @@ export function App(): JSX.Element {
     html.dataset.theme = theme;
   }, [theme]);
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedSearch(searchTerm.trim()), 120);
+    return () => window.clearTimeout(handle);
+  }, [searchTerm]);
+
+  const indexStatus = useQuery({
+    queryKey: ["index-status"],
+    queryFn: () => source.getIndexStatus(),
+    retry: false,
+  });
   const overview = useQuery({
     queryKey: ["overview"],
     queryFn: () => source.getOverview(),
     retry: false,
   });
-  const selected = useQuery({
-    queryKey: ["resolve", selectedRef],
-    queryFn: () => source.resolveAsset(selectedRef!),
+  const selectedDetail = useQuery({
+    queryKey: ["asset-detail", selectedRef],
+    queryFn: () => source.getAssetDetail(selectedRef!),
     enabled: selectedRef !== null,
     retry: false,
   });
-  const neighborhood = useQuery({
-    queryKey: ["neighborhood", selectedRef, activeOrigins.join(",")],
-    queryFn: () => source.getNeighborhood(selectedRef!, "deps", 1),
-    enabled: selectedRef !== null,
+  const graph = useQuery({
+    queryKey: ["graph", activeTypes.join(","), activeOrigins.join(","), nodeBudget],
+    queryFn: () => source.getGraph({ types: activeTypes, origins: activeOrigins, limit: nodeBudget }),
     retry: false,
   });
-  const inboundEdges = useQuery({
-    queryKey: ["edges", "in", selectedRef],
-    queryFn: () => source.getEdges({ to: selectedRef!, limit: 100 }),
-    enabled: selectedRef !== null,
-    retry: false,
-  });
-  const outboundEdges = useQuery({
-    queryKey: ["edges", "out", selectedRef],
-    queryFn: () => source.getEdges({ from: selectedRef!, limit: 100 }),
+  const rootTrace = useQuery({
+    queryKey: ["root-trace", selectedRef, traceDir, nodeBudget],
+    queryFn: () => source.getRootTrace(selectedRef!, traceDir, 5, nodeBudget),
     enabled: selectedRef !== null,
     retry: false,
   });
   const search = useQuery({
-    queryKey: ["search", searchTerm],
-    queryFn: () => source.searchAssets({ name: searchTerm, limit: 20 }),
-    enabled: searchTerm.trim().length >= 2,
+    queryKey: ["search", debouncedSearch],
+    queryFn: () => source.searchAssets({ name: debouncedSearch, limit: 20 }),
+    enabled: debouncedSearch.length >= 2,
     retry: false,
   });
   const unused = useQuery({
@@ -101,6 +113,9 @@ export function App(): JSX.Element {
   });
 
   const totals = overview.data;
+  const status = indexStatus.data;
+  const displayedGraph = selectedRef ? rootTrace.data : graph.data;
+  const graphLoading = selectedRef ? rootTrace.isFetching : graph.isFetching;
   const typeRows = ASSET_TYPES.filter((type) => (totals?.byType[type] ?? 0) > 0 || typeFilters[type]);
 
   return (
@@ -114,8 +129,10 @@ export function App(): JSX.Element {
           <Database size={14} />
           <span>local index</span>
           <span className="muted">/</span>
-          <span className="muted">{overview.isError ? "no index" : "schema v3"}</span>
-          <span className={overview.isError ? "status-dot status-warn" : "status-dot"} />
+          <span className="muted">
+            {indexStatus.isError ? "no index" : `schema ${status?.schemaVersion ?? status?.expectedSchemaVersion ?? "?"}`}
+          </span>
+          <span className={indexStatus.isError ? "status-dot status-warn" : "status-dot"} />
         </div>
         <label className="search-box">
           <Search size={14} />
@@ -171,12 +188,36 @@ export function App(): JSX.Element {
               <Stat value={unused.data ? fmtNumber(unused.data.length) : "-"} label="unused" tone="warning" />
             </div>
             <p className="fine-print">
-              {overview.isLoading
+              {indexStatus.isLoading
                 ? "loading index metadata"
-                : overview.isError
+                : indexStatus.isError
                   ? "open an index.db or start the server with --db"
-                  : "ready for graph workbench wiring"}
+                  : `${status?.projectRoot ?? "stored index"} / ${status?.indexedAt ?? "indexed time unknown"}`}
             </p>
+          </section>
+          <section>
+            <h2>Node Budget</h2>
+            <label className="range-control">
+              <input
+                min="50"
+                max="5000"
+                step="50"
+                type="range"
+                value={nodeBudget}
+                onChange={(event) => setNodeBudget(Number(event.target.value))}
+              />
+              <input
+                min="50"
+                max="5000"
+                step="50"
+                type="number"
+                value={nodeBudget}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  if (Number.isFinite(next)) setNodeBudget(next);
+                }}
+              />
+            </label>
           </section>
           <section>
             <h2>Asset Types</h2>
@@ -211,32 +252,37 @@ export function App(): JSX.Element {
           <div className="canvas-chip-row">
             <span>scope: Assets/</span>
             <span>mode: {engine.toUpperCase()}</span>
-            <span>{fmtNumber(neighborhood.data?.nodes.length ?? totals?.totalAssets)} shown</span>
+            <span>{fmtNumber(displayedGraph?.nodes.length ?? totals?.totalAssets)} shown</span>
+            {displayedGraph?.truncated ? <span>{fmtNumber(displayedGraph.totalCandidates)} total</span> : null}
           </div>
           <NeighborhoodCanvas
             activeOrigins={originFilters}
             activeTypes={typeFilters}
             engine={engine}
-            graph={neighborhood.data}
-            loading={neighborhood.isFetching}
-            selectedGuid={selected.data?.guid ?? null}
+            graph={displayedGraph}
+            loading={graphLoading}
+            selectedGuid={selectedDetail.data?.asset.guid ?? null}
             onSelect={selectRef}
           />
         </main>
 
         <aside className="inspector">
-          {selected.data ? (
+          {selectedDetail.data ? (
             <SelectionPanel
-              asset={selected.data}
-              inbound={inboundEdges.data ?? []}
-              loadingEdges={inboundEdges.isFetching || outboundEdges.isFetching}
+              asset={selectedDetail.data.asset}
+              inbound={selectedDetail.data.inbound}
+              inboundCount={selectedDetail.data.inboundCount}
+              loadingEdges={selectedDetail.isFetching}
               onCopy={(text) => void navigator.clipboard?.writeText(text)}
               onSelect={selectRef}
-              outbound={outboundEdges.data ?? []}
+              outbound={selectedDetail.data.outbound}
+              outboundCount={selectedDetail.data.outboundCount}
               canGoBack={historyIndex > 0}
               canGoForward={historyIndex < history.length - 1}
               onBack={() => goHistory(-1)}
               onForward={() => goHistory(1)}
+              traceDir={traceDir}
+              onTraceDir={setTraceDir}
             />
           ) : (
             <OverviewPanel overview={totals} onSelect={selectRef} />
@@ -375,14 +421,18 @@ function OverviewPanel(props: {
 function SelectionPanel(props: {
   asset: AssetNode;
   inbound: EdgeDetail[];
+  inboundCount: number;
   outbound: EdgeDetail[];
+  outboundCount: number;
   loadingEdges: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
+  traceDir: TraceDir;
   onBack(): void;
   onForward(): void;
   onCopy(text: string): void;
   onSelect(ref: string): void;
+  onTraceDir(traceDir: TraceDir): void;
 }): JSX.Element {
   return (
     <>
@@ -408,16 +458,23 @@ function SelectionPanel(props: {
         <div className="meta-grid">
           <Meta label="Origin" value={props.asset.origin} />
           <Meta label="Size" value={fmtBytes(props.asset.fileSize)} />
-          <Meta label="In / Out" value={`${fmtNumber(props.inbound.length)} / ${fmtNumber(props.outbound.length)}`} />
+          <Meta label="In / Out" value={`${fmtNumber(props.inboundCount)} / ${fmtNumber(props.outboundCount)}`} />
           <Meta label="Modified" value={props.asset.mtime ? new Date(props.asset.mtime).toLocaleDateString() : "-"} />
         </div>
       </section>
       <section>
-        <h2>Referenced By {props.loadingEdges ? "" : props.inbound.length}</h2>
+        <h2>Trace</h2>
+        <div className="trace-toggle">
+          <SegmentButton label="DEPENDS" selected={props.traceDir === "deps"} onClick={() => props.onTraceDir("deps")} />
+          <SegmentButton label="REFS" selected={props.traceDir === "refs"} onClick={() => props.onTraceDir("refs")} />
+        </div>
+      </section>
+      <section>
+        <h2>Referenced By {props.loadingEdges ? "" : props.inboundCount}</h2>
         <EdgeList edges={props.inbound} empty="No inbound references." mode="in" onSelect={props.onSelect} />
       </section>
       <section>
-        <h2>Depends On {props.loadingEdges ? "" : props.outbound.length}</h2>
+        <h2>Depends On {props.loadingEdges ? "" : props.outboundCount}</h2>
         <EdgeList edges={props.outbound} empty="No outgoing dependencies." mode="out" onSelect={props.onSelect} />
       </section>
     </>
@@ -457,6 +514,8 @@ function EdgeList(props: {
             <span>
               <code>{edge.refKind}</code>
               <code>{edge.context ?? "context -"}</code>
+              {edge.fileId ? <code>file {edge.fileId}</code> : null}
+              {edge.count > 1 ? <code>x{edge.count}</code> : null}
             </span>
           </button>
         );
@@ -469,7 +528,7 @@ function NeighborhoodCanvas(props: {
   activeOrigins: Record<Origin, boolean>;
   activeTypes: Record<AssetType, boolean>;
   engine: Engine;
-  graph: { nodes: CyNode[]; edges: CyEdge[]; rootId: string } | undefined;
+  graph: Neighborhood | undefined;
   loading: boolean;
   selectedGuid: string | null;
   onSelect(ref: string): void;
@@ -554,7 +613,7 @@ interface LayoutNode {
 }
 
 function buildLayout(
-  graph: { nodes: CyNode[]; edges: CyEdge[]; rootId: string } | undefined,
+  graph: Neighborhood | undefined,
   activeTypes: Record<AssetType, boolean>,
   activeOrigins: Record<Origin, boolean>,
 ): { edges: CyEdge[]; nodes: LayoutNode[]; nodesById: Map<string, LayoutNode> } {
@@ -562,7 +621,7 @@ function buildLayout(
 
   const visible = graph.nodes.filter((node) => activeTypes[node.data.type] && activeOrigins[node.data.origin]);
   const root = visible.find((node) => node.data.id === graph.rootId);
-  const rest = visible.filter((node) => node.data.id !== graph.rootId).slice(0, 64);
+  const rest = visible.filter((node) => node.data.id !== graph.rootId);
   const center = { x: 500, y: 325 };
   const radius = 215;
   const nodes: LayoutNode[] = [];

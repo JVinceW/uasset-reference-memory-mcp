@@ -489,4 +489,26 @@ Responsibilities:
   navigated to `00_BootstrapScene.unity`, history back returned to the prefab,
   and there were no app-origin console errors.
 
+2026-08-03 API contract and graph wiring slice:
+
+- Broadened `searchAssets` so the existing `name` filter searches asset name,
+  path, and GUID prefix.
+- Added read-only viewer query helpers for stored index status, selected asset
+  detail, budgeted graph data, and root trace closures.
+- Added `/api/index-status`, `/api/asset-detail`, `/api/graph`, and
+  `/api/root-trace` to the pure `handleApi` router used by both server and
+  static WASM paths.
+- Extended API and WASM parity tests for the new routes.
+- Wired `viewer-next` to use real index status metadata, a real node budget,
+  budgeted graph data before selection, asset-detail after selection, and
+  inbound/outbound root trace direction controls.
+- Validation: `npm run typecheck` passed; `npm test` passed with 40 test files
+  and 308 tests; `npm run build` passed and emitted `viewer-next`.
+- Browser smoke test against
+  `http://localhost:7777/viewer-next/index.html` using the Cricket slot-4
+  index passed: schema status showed `schema 3`, node budget `50` rendered 50
+  graph nodes with 31,926 total candidates, GUID-prefix search selected
+  `P_CricketCommonUI.prefab`, `REFS` trace rendered, edge metadata was visible,
+  and there were no app-origin console errors.
+
 Complete after the full implementation and validation.
