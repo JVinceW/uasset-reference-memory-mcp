@@ -6,3 +6,9 @@ enabled = false
 
 [mcp_servers.pencil]
 enabled = false
+
+[plugins."superpowers@openai-curated"]
+enabled = false
+
+[plugins."superpowers@openai-curated-remote"]
+enabled = false

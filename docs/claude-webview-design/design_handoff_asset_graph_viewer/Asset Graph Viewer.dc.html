@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>body{margin:0;background:#e9eaec;font-family:'IBM Plex Sans',system-ui,sans-serif}a{color:#2a78d6}a:hover{color:#1c5da8}.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:600 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}.dv-tname{font:600 13px/1.2 'IBM Plex Sans',sans-serif;color:#1a1a1a}.dv-opts{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}.dv-oid{font:600 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.3 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.55)}.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.09);overflow:hidden}.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}.dv-next{margin:24px 0 0;font:12px/1.6 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.5)}.dv-note{margin:0 0 22px;max-width:900px;font:13px/1.65 'IBM Plex Sans',sans-serif;color:rgba(0,0,0,.62)}</style></helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Unity asset-reference graph explorer — first round</span></div>
+<p class="dv-note">Grounded in the <strong>uasset-reference-memory-mcp</strong> data model: nodes are assets (GUID, path, <code>asset_type</code>, origin), edges carry a <code>ref_kind</code> (<code>USES_MATERIAL</code>, <code>NESTED_PREFAB</code>, <code>USES_SHADER</code>…) and the YAML <code>context</code> property they were found on. Three layout engines, one shared chrome vocabulary. Graph size is a setting — see the <em>Node budget</em> control in <a class="dv-oid" href="#1a">1a</a>'s sidebar (also a live tweak on this file).</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Workbench — 2D force layout, dark, nothing selected (default loaded)</div>
+<div class="dv-card" style="width:1440px">
+<div style="width:1440px;height:900px;display:flex;flex-direction:column;background:#0b0d10;font-family:'IBM Plex Sans',sans-serif;color:#e7eaee">
+
+<div style="height:44px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;background:#121519;border-bottom:1px solid #242932">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:15px;height:15px;border-radius:4px;background:oklch(0.72 0.14 250)"></div><span style="font-size:12.5px;font-weight:600;letter-spacing:.02em">assetgraph</span></div>
+<div style="display:flex;align-items:center;gap:7px;padding:4px 9px;border-radius:6px;background:#181c22;border:1px solid #242932"><span style="font:500 11px 'IBM Plex Mono',monospace;color:#c3c9d3">SkyForge</span><span style="color:#3a4150;font-size:11px">/</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#626b79">Unity 6000.0.23f1</span><span style="width:5px;height:5px;border-radius:50%;background:oklch(0.72 0.14 145)"></span></div>
+<div style="flex:1;max-width:400px;display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:7px;background:#0b0d10;border:1px solid #242932"><span style="font:400 12px 'IBM Plex Mono',monospace;color:#626b79">⌕</span><span style="font-size:12px;color:#626b79">Search assets, GUIDs, paths…</span><span style="margin-left:auto;font:500 10px 'IBM Plex Mono',monospace;color:#4c5462;border:1px solid #242932;border-radius:4px;padding:2px 5px">⌘K</span></div>
+<div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+<div style="display:flex;padding:2px;border-radius:7px;background:#0b0d10;border:1px solid #242932"><span style="padding:4px 10px;border-radius:5px;background:#242932;font:500 11px 'IBM Plex Mono',monospace;color:#e7eaee">2D</span><span style="padding:4px 10px;border-radius:5px;font:500 11px 'IBM Plex Mono',monospace;color:#626b79">3D</span><span style="padding:4px 10px;border-radius:5px;font:500 11px 'IBM Plex Mono',monospace;color:#626b79">DAG</span></div>
+<div style="display:flex;padding:2px;border-radius:7px;background:#0b0d10;border:1px solid #242932"><span style="padding:4px 8px;border-radius:5px;font:500 10.5px 'IBM Plex Mono',monospace;color:#626b79">LIGHT</span><span style="padding:4px 8px;border-radius:5px;background:#242932;font:500 10.5px 'IBM Plex Mono',monospace;color:#e7eaee">DARK</span><span style="padding:4px 8px;border-radius:5px;font:500 10.5px 'IBM Plex Mono',monospace;color:#626b79">AUTO</span></div>
+<div style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:7px;background:oklch(0.72 0.14 250);color:#08121f;font-size:11.5px;font-weight:600">Reindex</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;min-height:0">
+
+<div style="width:248px;flex:none;display:flex;flex-direction:column;background:#121519;border-right:1px solid #242932;overflow:hidden">
+<div style="padding:14px 14px 12px;border-bottom:1px solid #1c2028">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79;margin-bottom:10px">INDEX</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+<div style="padding:8px 9px;border-radius:7px;background:#181c22;border:1px solid #242932"><div style="font:600 17px 'IBM Plex Mono',monospace;color:#e7eaee">4 812</div><div style="font-size:10px;color:#626b79;margin-top:2px">assets</div></div>
+<div style="padding:8px 9px;border-radius:7px;background:#181c22;border:1px solid #242932"><div style="font:600 17px 'IBM Plex Mono',monospace;color:#e7eaee">11 946</div><div style="font-size:10px;color:#626b79;margin-top:2px">edges</div></div>
+<div style="padding:8px 9px;border-radius:7px;background:#181c22;border:1px solid #242932"><div style="font:600 17px 'IBM Plex Mono',monospace;color:oklch(0.7 0.16 30)">14</div><div style="font-size:10px;color:#626b79;margin-top:2px">broken refs</div></div>
+<div style="padding:8px 9px;border-radius:7px;background:#181c22;border:1px solid #242932"><div style="font:600 17px 'IBM Plex Mono',monospace;color:oklch(0.75 0.14 80)">312</div><div style="font-size:10px;color:#626b79;margin-top:2px">unused</div></div>
+</div>
+<div style="margin-top:9px;font:400 10px 'IBM Plex Mono',monospace;color:#4c5462">indexed 4 min ago · schema v3</div>
+</div>
+
+<div style="padding:13px 14px;border-bottom:1px solid #1c2028;flex:1;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px"><span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79">ASSET TYPES</span><span style="font:400 10px 'IBM Plex Mono',monospace;color:#4c5462">all</span></div>
+<div style="display:flex;flex-direction:column;gap:1px">
+<sc-for list="{{ legend }}" as="t" hint-placeholder-count="9">
+<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:5px"><div style="{{ t.dot }}"></div><span style="font-size:11.5px;color:#c3c9d3;flex:1">{{ t.name }}</span><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#626b79">{{ t.count }}</span><div style="{{ t.bar }}"></div></div>
+</sc-for>
+</div>
+</div>
+
+<div style="padding:13px 14px;border-bottom:1px solid #1c2028">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79;margin-bottom:9px">ORIGIN</div>
+<div style="display:flex;gap:6px"><span style="padding:4px 9px;border-radius:20px;background:#242932;border:1px solid #2e3541;font-size:11px;color:#e7eaee">project</span><span style="padding:4px 9px;border-radius:20px;border:1px solid #242932;font-size:11px;color:#626b79">package</span><span style="padding:4px 9px;border-radius:20px;border:1px solid #242932;font-size:11px;color:#626b79">builtin</span></div>
+</div>
+
+<div style="padding:13px 14px;border-bottom:1px solid #1c2028">
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px"><span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79">NODE BUDGET</span><span style="font:500 11px 'IBM Plex Mono',monospace;color:oklch(0.72 0.14 250)">{{ budgetLabel }}</span></div>
+<div style="position:relative;height:4px;border-radius:3px;background:#242932"><div style="{{ budgetFill }}"></div><div style="{{ budgetKnob }}"></div></div>
+<div style="display:flex;justify-content:space-between;margin-top:7px;font:400 9.5px 'IBM Plex Mono',monospace;color:#4c5462"><span>50</span><span>ranked by degree</span><span>5 000</span></div>
+<div style="margin-top:10px;display:flex;gap:6px"><span style="padding:3px 8px;border-radius:5px;background:#181c22;border:1px solid #242932;font-size:10.5px;color:#939bab">collapse folders</span><span style="padding:3px 8px;border-radius:5px;background:#181c22;border:1px solid #242932;font-size:10.5px;color:#939bab">hide builtin</span></div>
+</div>
+
+<div style="padding:13px 14px">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79;margin-bottom:9px">SAVED</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:#939bab"><span style="width:3px;height:3px;border-radius:50%;background:#4c5462"></span>Unused textures &gt; 2 MB</div>
+<div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:#939bab"><span style="width:3px;height:3px;border-radius:50%;background:#4c5462"></span>Shaders with 0 materials</div>
+<div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:#939bab"><span style="width:3px;height:3px;border-radius:50%;background:#4c5462"></span>Scenes → closure size</div>
+</div>
+</div>
+</div>
+
+<div style="flex:1;position:relative;background:radial-gradient(circle at 46% 42%,#12161c 0%,#0b0d10 68%);overflow:hidden">
+<svg width="872" height="820" viewBox="0 0 872 820" style="position:absolute;inset:0">
+<sc-for list="{{ g2.edges }}" as="e" hint-placeholder-count="40"><path d="{{ e.d }}" fill="none" stroke="{{ e.c }}" stroke-width="{{ e.w }}"></path></sc-for>
+</svg>
+<sc-for list="{{ g2.nodes }}" as="n" hint-placeholder-count="30">
+<div style="{{ n.style }}"><div style="{{ n.dot }}"></div><span style="{{ n.lab }}">{{ n.name }}</span></div>
+</sc-for>
+
+<div style="position:absolute;top:12px;left:12px;display:flex;gap:7px"><span style="padding:5px 10px;border-radius:6px;background:rgba(18,21,25,.86);border:1px solid #242932;font:400 11px 'IBM Plex Mono',monospace;color:#939bab">scope: Assets/</span><span style="padding:5px 10px;border-radius:6px;background:rgba(18,21,25,.86);border:1px solid #242932;font:400 11px 'IBM Plex Mono',monospace;color:#939bab">depth ∞</span><span style="padding:5px 10px;border-radius:6px;background:rgba(18,21,25,.86);border:1px solid #242932;font:400 11px 'IBM Plex Mono',monospace;color:#939bab">42 / 4 812 shown</span></div>
+
+<div style="position:absolute;bottom:14px;left:14px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;flex-direction:column;border-radius:7px;overflow:hidden;border:1px solid #242932;background:rgba(18,21,25,.9)"><span style="width:28px;height:26px;display:flex;align-items:center;justify-content:center;color:#939bab;font-size:14px;border-bottom:1px solid #242932">+</span><span style="width:28px;height:26px;display:flex;align-items:center;justify-content:center;color:#939bab;font-size:14px">−</span></div>
+<span style="width:30px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid #242932;background:rgba(18,21,25,.9);font:500 9px 'IBM Plex Mono',monospace;color:#939bab">FIT</span>
+</div>
+
+<div style="position:absolute;bottom:14px;right:14px;width:150px;height:104px;border-radius:8px;border:1px solid #242932;background:rgba(11,13,16,.92);overflow:hidden">
+<svg width="150" height="104" viewBox="0 0 872 820" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;opacity:.5"><sc-for list="{{ g2.edges }}" as="e" hint-placeholder-count="40"><path d="{{ e.d }}" fill="none" stroke="{{ e.c }}" stroke-width="3"></path></sc-for></svg>
+<div style="position:absolute;left:22px;top:16px;width:78px;height:56px;border:1px solid oklch(0.72 0.14 250 / .6);border-radius:3px;background:oklch(0.72 0.14 250 / .08)"></div>
+</div>
+</div>
+
+<div style="width:320px;flex:none;background:#121519;border-left:1px solid #242932;display:flex;flex-direction:column">
+<div style="padding:14px;border-bottom:1px solid #1c2028"><div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79">NO SELECTION</div><div style="margin-top:6px;font-size:12.5px;line-height:1.5;color:#939bab">Click a node to inspect it, or start from a hotspot below. <span style="color:#626b79">Shift-click two nodes to trace the path between them.</span></div></div>
+
+<div style="padding:14px;border-bottom:1px solid #1c2028">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79;margin-bottom:10px">HOTSPOTS · MOST REFERENCED</div>
+<div style="display:flex;flex-direction:column;gap:2px">
+<sc-for list="{{ hotspots }}" as="h" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:9px;padding:6px 7px;border-radius:6px;background:#181c22"><div style="{{ h.dot }}"></div><div style="flex:1;min-width:0"><div style="font:500 11.5px 'IBM Plex Mono',monospace;color:#e7eaee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ h.name }}</div><div style="font-size:10px;color:#4c5462;margin-top:1px">{{ h.type }}</div></div><span style="font:500 11px 'IBM Plex Mono',monospace;color:#939bab">{{ h.deg }}</span></div>
+</sc-for>
+</div>
+</div>
+
+<div style="padding:14px;border-bottom:1px solid #1c2028">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79;margin-bottom:10px">NEEDS ATTENTION</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:7px;background:oklch(0.7 0.16 30 / .1);border:1px solid oklch(0.7 0.16 30 / .28)"><span style="font:600 14px 'IBM Plex Mono',monospace;color:oklch(0.72 0.16 30)">14</span><div style="flex:1"><div style="font-size:11.5px;color:#e7eaee">broken references</div><div style="font-size:10px;color:#8b939f;margin-top:1px">GUIDs resolving to nothing</div></div></div>
+<div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:7px;background:oklch(0.75 0.14 80 / .09);border:1px solid oklch(0.75 0.14 80 / .25)"><span style="font:600 14px 'IBM Plex Mono',monospace;color:oklch(0.78 0.14 80)">312</span><div style="flex:1"><div style="font-size:11.5px;color:#e7eaee">unused candidates</div><div style="font-size:10px;color:#8b939f;margin-top:1px">Addressables-aware · verify vs. code loads</div></div></div>
+</div>
+</div>
+
+<div style="padding:14px">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79;margin-bottom:9px">RECENT</div>
+<div style="display:flex;flex-direction:column;gap:6px;font:400 11px 'IBM Plex Mono',monospace;color:#626b79"><span>M_Metal.mat</span><span>Level_01.unity</span><span>S_Lit_Custom.shader</span></div>
+</div>
+</div>
+</div>
+
+<div style="height:36px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px;background:#121519;border-top:1px solid #242932">
+<span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79">QUERY</span>
+<span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4c5462">MATCH (a)-[:USES_MATERIAL]-&gt;(m) WHERE m.name = 'M_Metal' RETURN a.path</span>
+<span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#4c5462">⌥↵ run · ⌃` expand</span>
+<span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:4px;background:#181c22;border:1px solid #242932;color:#626b79;font-size:9px">▲</span>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Light theme — shader selected, blast radius traced upstream (rest dimmed)</div>
+<div class="dv-card" style="width:1440px">
+<div style="width:1440px;height:900px;display:flex;flex-direction:column;background:#eef0f3;font-family:'IBM Plex Sans',sans-serif;color:#14171c">
+
+<div style="height:44px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;background:#fff;border-bottom:1px solid #e0e4ea">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:15px;height:15px;border-radius:4px;background:oklch(0.55 0.16 250)"></div><span style="font-size:12.5px;font-weight:600;letter-spacing:.02em">assetgraph</span></div>
+<div style="display:flex;align-items:center;gap:7px;padding:4px 9px;border-radius:6px;background:#f4f6f8;border:1px solid #e0e4ea"><span style="font:500 11px 'IBM Plex Mono',monospace;color:#33383f">SkyForge</span><span style="color:#c4cad2;font-size:11px">/</span><span style="font:400 11px 'IBM Plex Mono',monospace;color:#8d95a1">Unity 6000.0.23f1</span></div>
+<div style="flex:1;max-width:400px;display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:7px;background:#f4f6f8;border:1px solid #e0e4ea"><span style="font:400 12px 'IBM Plex Mono',monospace;color:#8d95a1">⌕</span><span style="font:500 12px 'IBM Plex Mono',monospace;color:#33383f">S_Lit_Custom</span><span style="margin-left:auto;font:500 10px 'IBM Plex Mono',monospace;color:#8d95a1;border:1px solid #e0e4ea;border-radius:4px;padding:2px 5px">esc</span></div>
+<div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+<div style="display:flex;padding:2px;border-radius:7px;background:#f4f6f8;border:1px solid #e0e4ea"><span style="padding:4px 10px;border-radius:5px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08);font:500 11px 'IBM Plex Mono',monospace;color:#14171c">2D</span><span style="padding:4px 10px;border-radius:5px;font:500 11px 'IBM Plex Mono',monospace;color:#8d95a1">3D</span><span style="padding:4px 10px;border-radius:5px;font:500 11px 'IBM Plex Mono',monospace;color:#8d95a1">DAG</span></div>
+<div style="display:flex;padding:2px;border-radius:7px;background:#f4f6f8;border:1px solid #e0e4ea"><span style="padding:4px 8px;border-radius:5px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08);font:500 10.5px 'IBM Plex Mono',monospace;color:#14171c">LIGHT</span><span style="padding:4px 8px;border-radius:5px;font:500 10.5px 'IBM Plex Mono',monospace;color:#8d95a1">DARK</span><span style="padding:4px 8px;border-radius:5px;font:500 10.5px 'IBM Plex Mono',monospace;color:#8d95a1">AUTO</span></div>
+<div style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:7px;background:oklch(0.55 0.16 250);color:#fff;font-size:11.5px;font-weight:600">Reindex</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;min-height:0">
+<div style="width:248px;flex:none;display:flex;flex-direction:column;background:#fff;border-right:1px solid #e0e4ea">
+<div style="padding:13px 14px;border-bottom:1px solid #eef0f3;background:oklch(0.55 0.16 250 / .05)">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:oklch(0.5 0.16 250);margin-bottom:8px">TRACE MODE · UPSTREAM</div>
+<div style="font-size:12px;line-height:1.5;color:#43494f">Everything that would break if <span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#14171c">S_Lit_Custom</span> changes.</div>
+<div style="display:flex;gap:6px;margin-top:10px"><span style="padding:4px 9px;border-radius:6px;background:oklch(0.55 0.16 250);color:#fff;font-size:11px;font-weight:500">↑ referenced by</span><span style="padding:4px 9px;border-radius:6px;border:1px solid #e0e4ea;font-size:11px;color:#5d6570">↓ depends on</span></div>
+</div>
+<div style="padding:13px 14px;border-bottom:1px solid #eef0f3">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#8d95a1;margin-bottom:9px">BLAST RADIUS</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<sc-for list="{{ blast }}" as="b" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:9px"><span style="width:22px;font:600 10px 'IBM Plex Mono',monospace;color:#8d95a1">{{ b.hop }}</span><div style="flex:1"><div style="display:flex;justify-content:space-between;font-size:11px;color:#43494f"><span>{{ b.label }}</span><span style="font:500 11px 'IBM Plex Mono',monospace">{{ b.n }}</span></div><div style="margin-top:4px;height:4px;border-radius:3px;background:#eef0f3"><div style="{{ b.fill }}"></div></div></div></div>
+</sc-for>
+</div>
+<div style="margin-top:12px;padding:8px 10px;border-radius:7px;background:#f4f6f8;font-size:11px;line-height:1.5;color:#5d6570">Closure reaches <strong style="color:#14171c">2 scenes</strong>. Rebuild affects 6 bundles.</div>
+</div>
+<div style="padding:13px 14px;flex:1">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#8d95a1;margin-bottom:9px">TYPES IN PATH</div>
+<div style="display:flex;flex-direction:column;gap:1px">
+<sc-for list="{{ legendL }}" as="t" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:5px"><div style="{{ t.dot }}"></div><span style="font-size:11.5px;color:#43494f;flex:1">{{ t.name }}</span><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8d95a1">{{ t.count }}</span></div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="flex:1;position:relative;background:radial-gradient(circle at 48% 44%,#ffffff 0%,#e8ebef 74%);overflow:hidden">
+<svg width="872" height="820" viewBox="0 0 872 820" style="position:absolute;inset:0">
+<sc-for list="{{ g2l.edges }}" as="e" hint-placeholder-count="40"><path d="{{ e.d }}" fill="none" stroke="{{ e.c }}" stroke-width="{{ e.w }}"></path></sc-for>
+</svg>
+<sc-for list="{{ g2l.nodes }}" as="n" hint-placeholder-count="30">
+<div style="{{ n.style }}"><div style="{{ n.dot }}"></div><span style="{{ n.lab }}">{{ n.name }}</span></div>
+</sc-for>
+<div style="position:absolute;top:12px;left:12px;display:flex;gap:7px"><span style="padding:5px 10px;border-radius:6px;background:oklch(0.55 0.16 250);color:#fff;font:500 11px 'IBM Plex Mono',monospace">trace: S_Lit_Custom ↑</span><span style="padding:5px 10px;border-radius:6px;background:rgba(255,255,255,.92);border:1px solid #e0e4ea;font:400 11px 'IBM Plex Mono',monospace;color:#5d6570">13 on path · 29 dimmed</span><span style="padding:5px 10px;border-radius:6px;background:rgba(255,255,255,.92);border:1px solid #e0e4ea;font:400 11px 'IBM Plex Mono',monospace;color:#5d6570">clear ✕</span></div>
+<div style="position:absolute;bottom:14px;left:14px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;flex-direction:column;border-radius:7px;overflow:hidden;border:1px solid #e0e4ea;background:rgba(255,255,255,.95)"><span style="width:28px;height:26px;display:flex;align-items:center;justify-content:center;color:#5d6570;font-size:14px;border-bottom:1px solid #e0e4ea">+</span><span style="width:28px;height:26px;display:flex;align-items:center;justify-content:center;color:#5d6570;font-size:14px">−</span></div><span style="width:30px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid #e0e4ea;background:rgba(255,255,255,.95);font:500 9px 'IBM Plex Mono',monospace;color:#5d6570">FIT</span></div>
+</div>
+
+<div style="width:320px;flex:none;background:#fff;border-left:1px solid #e0e4ea;display:flex;flex-direction:column">
+<div style="padding:14px;border-bottom:1px solid #eef0f3">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:9px;height:9px;border-radius:2px;background:oklch(0.6 0.145 340)"></div><span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:oklch(0.5 0.145 340)">SHADER</span></div>
+<div style="margin-top:8px;font:600 16px 'IBM Plex Mono',monospace;color:#14171c">S_Lit_Custom</div>
+<div style="margin-top:4px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8d95a1;word-break:break-all">Assets/Shaders/S_Lit_Custom.shader</div>
+<div style="margin-top:8px;display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;background:#f4f6f8;font:400 10px 'IBM Plex Mono',monospace;color:#5d6570">guid 9f2a41c8e0b74d3f8a1c6e2b5d907f13 ⧉</div>
+</div>
+<div style="padding:12px 14px;border-bottom:1px solid #eef0f3;display:grid;grid-template-columns:1fr 1fr;gap:10px 8px">
+<div><div style="font-size:9.5px;color:#8d95a1">ORIGIN</div><div style="font:500 11.5px 'IBM Plex Mono',monospace;margin-top:2px">project</div></div>
+<div><div style="font-size:9.5px;color:#8d95a1">SIZE</div><div style="font:500 11.5px 'IBM Plex Mono',monospace;margin-top:2px">14.2 KB</div></div>
+<div><div style="font-size:9.5px;color:#8d95a1">IN / OUT</div><div style="font:500 11.5px 'IBM Plex Mono',monospace;margin-top:2px">3 / 0</div></div>
+<div><div style="font-size:9.5px;color:#8d95a1">MODIFIED</div><div style="font:500 11.5px 'IBM Plex Mono',monospace;margin-top:2px">2d ago</div></div>
+</div>
+<div style="display:flex;gap:2px;padding:8px 12px 0;border-bottom:1px solid #eef0f3"><span style="padding:6px 10px;font-size:11.5px;font-weight:600;color:#14171c;border-bottom:2px solid oklch(0.55 0.16 250)">Referenced by 3</span><span style="padding:6px 10px;font-size:11.5px;color:#8d95a1">Depends on 0</span><span style="padding:6px 10px;font-size:11.5px;color:#8d95a1">Source</span></div>
+<div style="padding:10px 12px;border-bottom:1px solid #eef0f3;display:flex;flex-direction:column;gap:4px">
+<sc-for list="{{ refs }}" as="r" hint-placeholder-count="3">
+<div style="padding:8px 9px;border-radius:7px;border:1px solid #eef0f3"><div style="display:flex;align-items:center;gap:8px"><div style="{{ r.dot }}"></div><span style="flex:1;font:500 11.5px 'IBM Plex Mono',monospace;color:#14171c">{{ r.name }}</span><span style="{{ r.kindStyle }}">{{ r.kind }}</span></div><div style="margin-top:5px;font:400 10px 'IBM Plex Mono',monospace;color:#8d95a1">{{ r.path }}</div><div style="margin-top:3px;font:400 10px 'IBM Plex Mono',monospace;color:#8d95a1">context <span style="color:#43494f">{{ r.context }}</span></div></div>
+</sc-for>
+</div>
+<div style="padding:12px 14px;flex:1;min-height:0">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#8d95a1;margin-bottom:8px">REF SITE · M_Metal.mat</div>
+<div style="padding:10px 11px;border-radius:8px;background:#f7f8fa;border:1px solid #e8ebef;font:400 10.5px/1.65 'IBM Plex Mono',monospace;color:#43494f;white-space:pre;overflow:hidden">--- !u!21 &amp;2100000
+Material:
+  m_Name: M_Metal
+  <span style="background:oklch(0.55 0.16 250 / .13);border-radius:3px">m_Shader: {fileID: 4800000,
+    guid: 9f2a41c8e0b7…, type: 3}</span>
+  m_SavedProperties:
+    m_TexEnvs:
+    - _MainTex: {guid: 3c81…}</div>
+<div style="margin-top:10px;display:flex;gap:6px"><span style="padding:5px 10px;border-radius:6px;background:#14171c;color:#fff;font-size:11px;font-weight:500">Reveal in Unity</span><span style="padding:5px 10px;border-radius:6px;border:1px solid #e0e4ea;font-size:11px;color:#43494f">Copy GUID</span></div>
+</div>
+</div>
+</div>
+
+<div style="height:36px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px;background:#fff;border-top:1px solid #e0e4ea">
+<span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#8d95a1">QUERY</span>
+<span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#8d95a1">trace_path(to: 'S_Lit_Custom', direction: 'inbound', depth: 5)</span>
+<span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8d95a1">13 rows · 4 ms</span>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>3D galaxy — chrome dissolves into floating HUD, command palette open on search</div>
+<div class="dv-card" style="width:1440px">
+<div style="width:1440px;height:900px;display:flex;flex-direction:column;background:#07080b;font-family:'IBM Plex Sans',sans-serif;color:#e7eaee">
+<div style="height:44px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;background:rgba(10,12,16,.9);border-bottom:1px solid #1a1e26">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:15px;height:15px;border-radius:4px;background:oklch(0.72 0.14 250)"></div><span style="font-size:12.5px;font-weight:600">assetgraph</span></div>
+<span style="font:400 11px 'IBM Plex Mono',monospace;color:#626b79">SkyForge · 4 812 assets</span>
+<div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+<div style="display:flex;padding:2px;border-radius:7px;background:#0b0d10;border:1px solid #1a1e26"><span style="padding:4px 10px;border-radius:5px;font:500 11px 'IBM Plex Mono',monospace;color:#626b79">2D</span><span style="padding:4px 10px;border-radius:5px;background:#242932;font:500 11px 'IBM Plex Mono',monospace;color:#e7eaee">3D</span><span style="padding:4px 10px;border-radius:5px;font:500 11px 'IBM Plex Mono',monospace;color:#626b79">DAG</span></div>
+<span style="padding:5px 10px;border-radius:7px;border:1px solid #1a1e26;font:500 10.5px 'IBM Plex Mono',monospace;color:#939bab">ORBIT</span>
+<span style="padding:5px 10px;border-radius:7px;border:1px solid #1a1e26;font:500 10.5px 'IBM Plex Mono',monospace;color:#939bab">AUTO</span>
+</div>
+</div>
+<div style="flex:1;position:relative;overflow:hidden;background:radial-gradient(ellipse 70% 60% at 50% 46%,#131a26 0%,#07080b 72%)">
+<svg width="1440" height="856" viewBox="0 0 1440 856" style="position:absolute;inset:0">
+<sc-for list="{{ g3.edges }}" as="e" hint-placeholder-count="40"><path d="{{ e.d }}" fill="none" stroke="{{ e.c }}" stroke-width="{{ e.w }}"></path></sc-for>
+</svg>
+<sc-for list="{{ g3.nodes }}" as="n" hint-placeholder-count="30">
+<div style="{{ n.style }}"><div style="{{ n.dot }}"></div><span style="{{ n.lab }}">{{ n.name }}</span></div>
+</sc-for>
+
+<div style="position:absolute;left:18px;top:18px;width:216px;padding:13px 13px 11px;border-radius:11px;background:rgba(13,16,21,.72);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08)">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#7d8694;margin-bottom:9px">CLUSTERS</div>
+<div style="display:flex;flex-direction:column;gap:1px">
+<sc-for list="{{ legend }}" as="t" hint-placeholder-count="9">
+<div style="display:flex;align-items:center;gap:8px;padding:3px 4px"><div style="{{ t.dot }}"></div><span style="font-size:11.5px;color:#c3c9d3;flex:1">{{ t.name }}</span><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#7d8694">{{ t.count }}</span></div>
+</sc-for>
+</div>
+<div style="margin-top:11px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;font:400 10px 'IBM Plex Mono',monospace;color:#7d8694"><span>depth fog</span><span style="color:#c3c9d3">on</span></div>
+<div style="margin-top:5px;display:flex;justify-content:space-between;font:400 10px 'IBM Plex Mono',monospace;color:#7d8694"><span>edge bundling</span><span style="color:#c3c9d3">0.4</span></div>
+</div>
+
+<div style="position:absolute;right:18px;top:18px;width:250px;padding:13px;border-radius:11px;background:rgba(13,16,21,.72);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08)">
+<div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:2px;background:oklch(0.75 0.145 195)"></div><span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:oklch(0.78 0.145 195)">PREFAB</span></div>
+<div style="margin-top:7px;font:600 14px 'IBM Plex Mono',monospace">Player</div>
+<div style="margin-top:3px;font:400 10px 'IBM Plex Mono',monospace;color:#7d8694">Assets/Prefabs/Player.prefab</div>
+<div style="margin-top:11px;display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;justify-content:space-between;font:400 10.5px 'IBM Plex Mono',monospace;color:#7d8694"><span>dependencies</span><span style="color:#e7eaee">6 direct · 19 closure</span></div>
+<div style="display:flex;justify-content:space-between;font:400 10.5px 'IBM Plex Mono',monospace;color:#7d8694"><span>referenced by</span><span style="color:#e7eaee">2 scenes</span></div>
+<div style="display:flex;justify-content:space-between;font:400 10.5px 'IBM Plex Mono',monospace;color:#7d8694"><span>closure size</span><span style="color:#e7eaee">24.6 MB</span></div>
+</div>
+<div style="margin-top:11px;display:flex;gap:5px"><span style="flex:1;text-align:center;padding:6px 0;border-radius:6px;background:oklch(0.72 0.14 250);color:#08121f;font-size:11px;font-weight:600">Focus</span><span style="flex:1;text-align:center;padding:6px 0;border-radius:6px;border:1px solid rgba(255,255,255,.12);font-size:11px;color:#c3c9d3">Isolate</span></div>
+</div>
+
+<div style="position:absolute;left:50%;top:96px;transform:translateX(-50%);width:520px;border-radius:13px;background:rgba(13,16,21,.9);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.11);box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden">
+<div style="display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid rgba(255,255,255,.07)"><span style="font:400 13px 'IBM Plex Mono',monospace;color:#7d8694">⌕</span><span style="font:500 14px 'IBM Plex Mono',monospace;color:#e7eaee">M_</span><span style="width:1px;height:16px;background:oklch(0.72 0.14 250)"></span><span style="margin-left:auto;font:400 10px 'IBM Plex Mono',monospace;color:#5b6472">18 matches</span></div>
+<div style="padding:6px">
+<sc-for list="{{ results }}" as="r" hint-placeholder-count="5">
+<div style="{{ r.row }}"><div style="{{ r.dot }}"></div><div style="flex:1;min-width:0"><div style="font:500 12px 'IBM Plex Mono',monospace;color:#e7eaee">{{ r.name }}</div><div style="font:400 10px 'IBM Plex Mono',monospace;color:#5b6472;margin-top:2px">{{ r.path }}</div></div><span style="font:400 10px 'IBM Plex Mono',monospace;color:#7d8694">{{ r.meta }}</span></div>
+</sc-for>
+</div>
+<div style="display:flex;gap:14px;padding:9px 15px;border-top:1px solid rgba(255,255,255,.07);font:400 10px 'IBM Plex Mono',monospace;color:#5b6472"><span>↵ focus node</span><span>⇧↵ trace upstream</span><span>⌘↵ isolate closure</span></div>
+</div>
+
+<div style="position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:7px">
+<span style="padding:6px 12px;border-radius:8px;background:rgba(13,16,21,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);font:400 11px 'IBM Plex Mono',monospace;color:#939bab">drag orbit</span>
+<span style="padding:6px 12px;border-radius:8px;background:rgba(13,16,21,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);font:400 11px 'IBM Plex Mono',monospace;color:#939bab">scroll dolly</span>
+<span style="padding:6px 12px;border-radius:8px;background:rgba(13,16,21,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);font:400 11px 'IBM Plex Mono',monospace;color:#939bab">F fit</span>
+<span style="padding:6px 12px;border-radius:8px;background:rgba(13,16,21,.75);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);font:400 11px 'IBM Plex Mono',monospace;color:#939bab">42 / 4 812 nodes</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Layered DAG — icon rail, dense reading order, query drawer open with results</div>
+<div class="dv-card" style="width:1440px">
+<div style="width:1440px;height:900px;display:flex;flex-direction:column;background:#0b0d10;font-family:'IBM Plex Sans',sans-serif;color:#e7eaee">
+<div style="height:44px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;background:#121519;border-bottom:1px solid #242932">
+<div style="display:flex;align-items:center;gap:8px"><div style="width:15px;height:15px;border-radius:4px;background:oklch(0.72 0.14 250)"></div><span style="font-size:12.5px;font-weight:600">assetgraph</span></div>
+<div style="display:flex;align-items:center;gap:7px;font:400 11px 'IBM Plex Mono',monospace;color:#626b79"><span style="color:#c3c9d3">SkyForge</span><span>/</span><span>Assets/Prefabs</span><span>/</span><span style="color:#c3c9d3">Player.prefab</span></div>
+<div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+<div style="display:flex;padding:2px;border-radius:7px;background:#0b0d10;border:1px solid #242932"><span style="padding:4px 10px;border-radius:5px;font:500 11px 'IBM Plex Mono',monospace;color:#626b79">2D</span><span style="padding:4px 10px;border-radius:5px;font:500 11px 'IBM Plex Mono',monospace;color:#626b79">3D</span><span style="padding:4px 10px;border-radius:5px;background:#242932;font:500 11px 'IBM Plex Mono',monospace;color:#e7eaee">DAG</span></div>
+<span style="padding:5px 10px;border-radius:7px;border:1px solid #242932;font:500 10.5px 'IBM Plex Mono',monospace;color:#939bab">EXPORT CSV</span>
+</div>
+</div>
+
+<div style="flex:1;display:flex;min-height:0">
+<div style="width:56px;flex:none;background:#121519;border-right:1px solid #242932;display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:4px">
+<sc-for list="{{ rail }}" as="r" hint-placeholder-count="6"><div style="{{ r.style }}">{{ r.k }}</div></sc-for>
+</div>
+
+<div style="flex:1;position:relative;overflow:hidden;background:#0b0d10">
+<div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px) 0 0/213px 100%"></div>
+<div style="position:absolute;top:0;left:0;right:0;height:26px;display:flex;border-bottom:1px solid #1a1e26;background:#0e1115">
+<sc-for list="{{ dagCols }}" as="c" hint-placeholder-count="5"><div style="{{ c.style }}">{{ c.label }}</div></sc-for>
+</div>
+<svg width="1064" height="616" viewBox="0 0 1064 616" style="position:absolute;inset:0">
+<sc-for list="{{ gd.edges }}" as="e" hint-placeholder-count="40"><path d="{{ e.d }}" fill="none" stroke="{{ e.c }}" stroke-width="{{ e.w }}"></path></sc-for>
+</svg>
+<sc-for list="{{ gd.nodes }}" as="n" hint-placeholder-count="30">
+<div style="{{ n.style }}"><div style="{{ n.dot }}"></div><span style="{{ n.lab }}">{{ n.name }}</span></div>
+</sc-for>
+</div>
+
+<div style="width:320px;flex:none;background:#121519;border-left:1px solid #242932;display:flex;flex-direction:column">
+<div style="padding:13px 14px;border-bottom:1px solid #1c2028"><div style="display:flex;align-items:center;gap:8px"><div style="width:9px;height:9px;border-radius:2px;background:oklch(0.75 0.145 195)"></div><span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:oklch(0.78 0.145 195)">PREFAB · ROOT</span></div><div style="margin-top:7px;font:600 15px 'IBM Plex Mono',monospace">Player</div><div style="margin-top:3px;font:400 10px 'IBM Plex Mono',monospace;color:#626b79">Assets/Prefabs/Player.prefab</div></div>
+<div style="padding:12px 14px;border-bottom:1px solid #1c2028">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79;margin-bottom:9px">DEPENDENCY CLOSURE</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ closure }}" as="c" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:8px"><div style="{{ c.dot }}"></div><span style="flex:1;font-size:11.5px;color:#c3c9d3">{{ c.name }}</span><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#626b79">{{ c.n }}</span><span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#4c5462;width:52px;text-align:right">{{ c.size }}</span></div>
+</sc-for>
+</div>
+<div style="margin-top:11px;padding:8px 10px;border-radius:7px;background:#181c22;border:1px solid #242932;display:flex;justify-content:space-between;font:500 11px 'IBM Plex Mono',monospace"><span style="color:#939bab">total closure</span><span>24.6 MB</span></div>
+</div>
+<div style="padding:12px 14px;flex:1">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79;margin-bottom:9px">REF KINDS ON PATH</div>
+<div style="display:flex;flex-wrap:wrap;gap:5px">
+<sc-for list="{{ kinds }}" as="k" hint-placeholder-count="6"><span style="{{ k.style }}">{{ k.name }} <span style="opacity:.6">{{ k.n }}</span></span></sc-for>
+</div>
+</div>
+</div>
+</div>
+
+<div style="height:240px;flex:none;background:#121519;border-top:1px solid #242932;display:flex;flex-direction:column">
+<div style="height:34px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid #1c2028">
+<span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#e7eaee">QUERY</span>
+<div style="display:flex;gap:2px"><span style="padding:3px 8px;border-radius:5px;background:#242932;font:500 10px 'IBM Plex Mono',monospace">graph</span><span style="padding:3px 8px;border-radius:5px;font:500 10px 'IBM Plex Mono',monospace;color:#626b79">sql</span></div>
+<span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#4c5462">312 rows · 7 ms</span>
+<span style="padding:4px 11px;border-radius:6px;background:oklch(0.72 0.14 250);color:#08121f;font-size:11px;font-weight:600">Run ⌥↵</span>
+<span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:4px;background:#181c22;border:1px solid #242932;color:#626b79;font-size:9px">▼</span>
+</div>
+<div style="padding:11px 14px;border-bottom:1px solid #1c2028;font:400 12px/1.7 'IBM Plex Mono',monospace;background:#0e1115"><span style="color:oklch(0.75 0.13 300)">MATCH</span> (a:Asset)<span style="color:#626b79">-[</span><span style="color:oklch(0.75 0.13 195)">:USES_TEXTURE</span><span style="color:#626b79">]-&gt;</span>(t:Texture)
+<span style="color:oklch(0.75 0.13 300)">WHERE</span> t.file_size &gt; <span style="color:oklch(0.78 0.13 80)">2097152</span> <span style="color:oklch(0.75 0.13 300)">AND NOT EXISTS</span> &#123; (t)&lt;-[:ADDRESSABLE_REF]-() &#125;
+<span style="color:oklch(0.75 0.13 300)">RETURN</span> t.path, t.file_size, count(a) <span style="color:oklch(0.75 0.13 300)">ORDER BY</span> t.file_size <span style="color:oklch(0.75 0.13 300)">DESC</span></div>
+<div style="flex:1;min-height:0;display:flex;flex-direction:column">
+<div style="display:grid;grid-template-columns:44px 1fr 110px 92px 100px;padding:7px 14px;border-bottom:1px solid #1c2028;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#626b79"><span>#</span><span>PATH</span><span>SIZE</span><span>REFS</span><span>ORIGIN</span></div>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="4">
+<div style="{{ r.style }}"><span style="color:#4c5462">{{ r.i }}</span><span style="display:flex;align-items:center;gap:8px;min-width:0"><span style="{{ r.dot }}"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c3c9d3">{{ r.path }}</span></span><span>{{ r.size }}</span><span style="{{ r.refStyle }}">{{ r.refs }}</span><span style="color:#626b79">{{ r.origin }}</span></div>
+</sc-for>
+<div style="margin-top:auto;flex:none;display:flex;align-items:center;gap:10px;padding:5px 14px;border-top:1px solid #1c2028;font:400 10px 'IBM Plex Mono',monospace;color:#4c5462"><span>showing 4 of 312</span><span style="padding:2px 7px;border-radius:4px;border:1px solid #242932;color:#939bab">load more</span><span style="margin-left:auto">total 61.4 MB reclaimable</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Transient states — indexing, first run, broken references</div>
+<div class="dv-card" style="width:1440px">
+<div style="width:1440px;height:400px;display:flex;background:#0b0d10;font-family:'IBM Plex Sans',sans-serif;color:#e7eaee">
+
+<div style="flex:1;padding:22px;border-right:1px solid #1a1e26;display:flex;flex-direction:column">
+<div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#626b79;margin-bottom:16px">INDEXING IN PROGRESS</div>
+<div style="font-size:14px;font-weight:600">Reading Unity serialization</div>
+<div style="margin-top:5px;font-size:11.5px;color:#939bab">3 108 of 4 812 assets · GUIDs from .meta, refs from YAML</div>
+<div style="margin-top:15px;height:5px;border-radius:3px;background:#181c22;overflow:hidden"><div style="width:64.6%;height:100%;border-radius:3px;background:oklch(0.72 0.14 250)"></div></div>
+<div style="margin-top:8px;display:flex;justify-content:space-between;font:400 10.5px 'IBM Plex Mono',monospace;color:#4c5462"><span>64.6%</span><span>~9 s remaining</span></div>
+<div style="margin-top:18px;display:flex;flex-direction:column;gap:7px">
+<sc-for list="{{ steps }}" as="s" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:9px"><span style="{{ s.mark }}">{{ s.glyph }}</span><span style="{{ s.text }}">{{ s.name }}</span><span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#4c5462">{{ s.meta }}</span></div></sc-for>
+</div>
+<div style="margin-top:auto;padding:9px 11px;border-radius:7px;background:#121519;border:1px solid #242932;font:400 10.5px/1.55 'IBM Plex Mono',monospace;color:#626b79">The graph stays queryable from the previous index while this runs.</div>
+</div>
+
+<div style="flex:1;padding:22px;border-right:1px solid #1a1e26;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+<div style="width:52px;height:52px;border-radius:14px;border:1px dashed #2e3541;display:flex;align-items:center;justify-content:center"><div style="width:16px;height:16px;border-radius:4px;background:#2e3541"></div></div>
+<div style="margin-top:16px;font-size:15px;font-weight:600">No index yet</div>
+<div style="margin-top:7px;max-width:280px;font-size:12px;line-height:1.6;color:#939bab">Point at a Unity project using <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#c3c9d3">Force Text</span> serialization. Indexing writes <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#c3c9d3">.asset-memory/index.db</span>.</div>
+<div style="margin-top:16px;display:flex;gap:8px"><span style="padding:7px 14px;border-radius:7px;background:oklch(0.72 0.14 250);color:#08121f;font-size:12px;font-weight:600">Choose project…</span><span style="padding:7px 14px;border-radius:7px;border:1px solid #242932;font-size:12px;color:#c3c9d3">Restore snapshot</span></div>
+<div style="margin-top:14px;font:400 10.5px 'IBM Plex Mono',monospace;color:#4c5462">or drop an index.db here</div>
+</div>
+
+<div style="flex:1;padding:22px;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:14px"><span style="width:7px;height:7px;border-radius:50%;background:oklch(0.7 0.16 30)"></span><span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:oklch(0.72 0.16 30)">14 BROKEN REFERENCES</span></div>
+<div style="font-size:11.5px;line-height:1.55;color:#939bab;margin-bottom:14px">GUIDs that resolve to nothing — deleted assets or a missing package.</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<sc-for list="{{ broken }}" as="b" hint-placeholder-count="4">
+<div style="padding:8px 10px;border-radius:7px;background:#121519;border:1px solid #242932"><div style="display:flex;align-items:center;gap:8px"><div style="{{ b.dot }}"></div><span style="flex:1;font:500 11px 'IBM Plex Mono',monospace;color:#e7eaee">{{ b.from }}</span><span style="font:400 9.5px 'IBM Plex Mono',monospace;color:oklch(0.72 0.16 30)">{{ b.kind }}</span></div><div style="margin-top:4px;font:400 10px 'IBM Plex Mono',monospace;color:#4c5462">→ {{ b.guid }} · {{ b.context }}</div></div>
+</sc-for>
+</div>
+<div style="margin-top:auto;display:flex;gap:8px"><span style="padding:6px 12px;border-radius:7px;border:1px solid #242932;font-size:11.5px;color:#c3c9d3">Show all 14</span><span style="padding:6px 12px;border-radius:7px;border:1px solid #242932;font-size:11.5px;color:#c3c9d3">Export report</span></div>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1f"><div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Theme + type system — dark, light, and system/auto tokens</div>
+<div class="dv-card" style="width:1440px">
+<div style="width:1440px;padding:24px;background:#fff;font-family:'IBM Plex Sans',sans-serif">
+<div style="display:flex;gap:22px">
+<sc-for list="{{ themes }}" as="t" hint-placeholder-count="3">
+<div style="{{ t.card }}">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="{{ t.title }}">{{ t.name }}</span><span style="{{ t.badge }}">{{ t.badgeText }}</span></div>
+<div style="{{ t.desc }}">{{ t.note }}</div>
+<div style="display:flex;gap:7px;margin-top:14px">
+<sc-for list="{{ t.swatches }}" as="s" hint-placeholder-count="6"><div style="{{ s.style }}"></div></sc-for>
+</div>
+<div style="{{ t.rowLabel }}">surface · panel · raised · border · text · dim</div>
+<div style="margin-top:15px;display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ t.chips }}" as="c" hint-placeholder-count="8"><span style="{{ c.style }}"><span style="{{ c.dot }}"></span>{{ c.name }}</span></sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="margin-top:22px;padding-top:18px;border-top:1px solid #eef0f3;display:flex;gap:40px">
+<div style="max-width:300px"><div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#8d95a1;margin-bottom:7px">TYPE</div><div style="font-size:12.5px;line-height:1.65;color:#43494f"><strong>IBM Plex Sans</strong> for UI copy, <strong>IBM Plex Mono</strong> for every identifier — paths, GUIDs, ref kinds, counts. Nothing below 9.5px, and mono is always ≥10px.</div></div>
+<div style="max-width:300px"><div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#8d95a1;margin-bottom:7px">COLOR RULE</div><div style="font-size:12.5px;line-height:1.65;color:#43494f">Every asset type is one hue at fixed chroma/lightness — so the legend, node dots, table rows and edges all agree, and no type reads louder than another.</div></div>
+<div style="max-width:300px"><div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#8d95a1;margin-bottom:7px">EDGES</div><div style="font-size:12.5px;line-height:1.65;color:#43494f">Edges inherit the <em>source</em> node's hue at low alpha; width encodes the collapsed <code>count</code>. On a trace, off-path elements drop to 12% rather than disappearing.</div></div>
+<div style="max-width:300px"><div style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#8d95a1;margin-bottom:7px">SCALE</div><div style="font-size:12.5px;line-height:1.65;color:#43494f">Node budget is a setting (50–5 000, ranked by degree), with folder collapsing and builtin hiding as separate switches. Above budget, the canvas aggregates by folder.</div></div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "take <a class="dv-oid" href="#1a">1a</a>'s chrome but with <a class="dv-oid" href="#1d">1d</a>'s layered canvas" · "make <a class="dv-oid" href="#1c">1c</a> the default and show it in light theme" · "add the unused-assets sweep screen"</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;nodeBudget&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:320,&quot;min&quot;:50,&quot;max&quot;:5000,&quot;step&quot;:50,&quot;tsType&quot;:&quot;number&quot;,&quot;unit&quot;:&quot; nodes&quot;,&quot;section&quot;:&quot;Graph&quot;},&quot;showAllLabels&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Graph&quot;},&quot;edgeStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;curved&quot;,&quot;options&quot;:[&quot;curved&quot;,&quot;straight&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Graph&quot;}}">
+const TYPE_HUE = {Scene:250,Prefab:195,Material:300,Texture:80,Script:145,Shader:340,AudioClip:40,AnimatorController:175,AnimationClip:160,ScriptableObject:265,Font:110,Sprite:20,Model:220};
+
+const ASSETS = [
+  ['Boot','Scene','Assets/Scenes/Boot.unity'],
+  ['MainMenu','Scene','Assets/Scenes/MainMenu.unity'],
+  ['Level_01','Scene','Assets/Scenes/Level_01.unity'],
+  ['Level_02','Scene','Assets/Scenes/Level_02.unity'],
+  ['Player','Prefab','Assets/Prefabs/Player.prefab'],
+  ['Enemy_Grunt','Prefab','Assets/Prefabs/Enemy_Grunt.prefab'],
+  ['Enemy_Brute','Prefab','Assets/Prefabs/Enemy_Brute.prefab'],
+  ['HUD_Root','Prefab','Assets/UI/HUD_Root.prefab'],
+  ['Pickup_Coin','Prefab','Assets/Prefabs/Pickup_Coin.prefab'],
+  ['VFX_Explosion','Prefab','Assets/VFX/VFX_Explosion.prefab'],
+  ['Turret','Prefab','Assets/Prefabs/Turret.prefab'],
+  ['M_PlayerBody','Material','Assets/Materials/M_PlayerBody.mat'],
+  ['M_EnemySkin','Material','Assets/Materials/M_EnemySkin.mat'],
+  ['M_Metal','Material','Assets/Materials/M_Metal.mat'],
+  ['M_Glass','Material','Assets/Materials/M_Glass.mat'],
+  ['M_UI_Blur','Material','Assets/UI/M_UI_Blur.mat'],
+  ['T_PlayerBody_BC','Texture','Assets/Textures/T_PlayerBody_BC.png'],
+  ['T_PlayerBody_N','Texture','Assets/Textures/T_PlayerBody_N.png'],
+  ['T_EnemySkin_BC','Texture','Assets/Textures/T_EnemySkin_BC.png'],
+  ['T_Metal_MRA','Texture','Assets/Textures/T_Metal_MRA.png'],
+  ['T_Noise','Texture','Assets/Textures/T_Noise.png'],
+  ['T_UI_Atlas','Texture','Assets/UI/T_UI_Atlas.png'],
+  ['S_Lit_Custom','Shader','Assets/Shaders/S_Lit_Custom.shader'],
+  ['S_Dissolve','Shader','Assets/Shaders/S_Dissolve.shader'],
+  ['PlayerController','Script','Assets/Scripts/PlayerController.cs'],
+  ['EnemyAI','Script','Assets/Scripts/EnemyAI.cs'],
+  ['HealthSystem','Script','Assets/Scripts/HealthSystem.cs'],
+  ['HUDBinder','Script','Assets/Scripts/HUDBinder.cs'],
+  ['PickupSpawner','Script','Assets/Scripts/PickupSpawner.cs'],
+  ['AC_Player','AnimatorController','Assets/Anim/AC_Player.controller'],
+  ['AC_Enemy','AnimatorController','Assets/Anim/AC_Enemy.controller'],
+  ['Anim_Run','AnimationClip','Assets/Anim/Anim_Run.anim'],
+  ['Anim_Idle','AnimationClip','Assets/Anim/Anim_Idle.anim'],
+  ['Anim_Death','AnimationClip','Assets/Anim/Anim_Death.anim'],
+  ['SFX_Hit','AudioClip','Assets/Audio/SFX_Hit.wav'],
+  ['SFX_Coin','AudioClip','Assets/Audio/SFX_Coin.wav'],
+  ['Mesh_Player','Model','Assets/Models/Player.fbx'],
+  ['Mesh_Turret','Model','Assets/Models/Turret.fbx'],
+  ['SO_GameConfig','ScriptableObject','Assets/Config/SO_GameConfig.asset'],
+  ['SO_EnemyStats','ScriptableObject','Assets/Config/SO_EnemyStats.asset'],
+  ['Font_Display','Font','Assets/UI/Font_Display.ttf'],
+  ['Sprite_Icon_Heart','Sprite','Assets/UI/Icon_Heart.png']
+];
+
+const LINKS = [
+  ['Boot','SO_GameConfig','SERIALIZED_REF'],['Boot','HUD_Root','NESTED_PREFAB'],
+  ['MainMenu','HUD_Root','NESTED_PREFAB'],['MainMenu','Font_Display','SERIALIZED_REF'],['MainMenu','M_UI_Blur','USES_MATERIAL'],
+  ['Level_01','Player','NESTED_PREFAB'],['Level_01','Enemy_Grunt','NESTED_PREFAB'],['Level_01','Enemy_Brute','NESTED_PREFAB'],
+  ['Level_01','Pickup_Coin','NESTED_PREFAB'],['Level_01','Turret','NESTED_PREFAB'],['Level_01','HUD_Root','NESTED_PREFAB'],
+  ['Level_02','Player','NESTED_PREFAB'],['Level_02','Enemy_Grunt','NESTED_PREFAB'],['Level_02','Turret','NESTED_PREFAB'],['Level_02','VFX_Explosion','NESTED_PREFAB'],
+  ['Player','PlayerController','USES_SCRIPT'],['Player','M_PlayerBody','USES_MATERIAL'],['Player','AC_Player','USES_ANIMATION'],
+  ['Player','Mesh_Player','USES_MESH'],['Player','HealthSystem','USES_SCRIPT'],['Player','SFX_Hit','SERIALIZED_REF'],
+  ['Enemy_Grunt','EnemyAI','USES_SCRIPT'],['Enemy_Grunt','M_EnemySkin','USES_MATERIAL'],['Enemy_Grunt','AC_Enemy','USES_ANIMATION'],
+  ['Enemy_Grunt','HealthSystem','USES_SCRIPT'],['Enemy_Grunt','SO_EnemyStats','SERIALIZED_REF'],
+  ['Enemy_Brute','EnemyAI','USES_SCRIPT'],['Enemy_Brute','M_EnemySkin','USES_MATERIAL'],['Enemy_Brute','AC_Enemy','USES_ANIMATION'],
+  ['Enemy_Brute','SO_EnemyStats','SERIALIZED_REF'],['Enemy_Brute','Mesh_Player','USES_MESH'],
+  ['HUD_Root','HUDBinder','USES_SCRIPT'],['HUD_Root','T_UI_Atlas','USES_TEXTURE'],['HUD_Root','Font_Display','SERIALIZED_REF'],
+  ['HUD_Root','Sprite_Icon_Heart','SERIALIZED_REF'],['HUD_Root','M_UI_Blur','USES_MATERIAL'],
+  ['Pickup_Coin','PickupSpawner','USES_SCRIPT'],['Pickup_Coin','M_Metal','USES_MATERIAL'],['Pickup_Coin','SFX_Coin','SERIALIZED_REF'],
+  ['Turret','M_Metal','USES_MATERIAL'],['Turret','Mesh_Turret','USES_MESH'],['Turret','EnemyAI','USES_SCRIPT'],
+  ['VFX_Explosion','M_Glass','USES_MATERIAL'],['VFX_Explosion','T_Noise','USES_TEXTURE'],
+  ['M_PlayerBody','S_Lit_Custom','USES_SHADER'],['M_PlayerBody','T_PlayerBody_BC','USES_TEXTURE'],['M_PlayerBody','T_PlayerBody_N','USES_TEXTURE'],
+  ['M_EnemySkin','S_Lit_Custom','USES_SHADER'],['M_EnemySkin','T_EnemySkin_BC','USES_TEXTURE'],
+  ['M_Metal','S_Lit_Custom','USES_SHADER'],['M_Metal','T_Metal_MRA','USES_TEXTURE'],
+  ['M_Glass','S_Dissolve','USES_SHADER'],['M_Glass','T_Noise','USES_TEXTURE'],
+  ['M_UI_Blur','S_Dissolve','USES_SHADER'],['M_UI_Blur','T_UI_Atlas','USES_TEXTURE'],
+  ['AC_Player','Anim_Run','USES_ANIMATION'],['AC_Player','Anim_Idle','USES_ANIMATION'],['AC_Player','Anim_Death','USES_ANIMATION'],
+  ['AC_Enemy','Anim_Idle','USES_ANIMATION'],['AC_Enemy','Anim_Death','USES_ANIMATION'],
+  ['SO_GameConfig','SO_EnemyStats','SERIALIZED_REF']
+];
+
+const DAG_LAYER = {Scene:0,Prefab:1,ScriptableObject:1,Material:2,Script:2,AnimatorController:2,Model:2,Texture:3,Shader:3,AnimationClip:3,AudioClip:3,Font:3,Sprite:3};
+
+class Component extends DCLogic {
+  col(type, theme, a) {
+    const l = theme === 'light' ? 0.58 : 0.74;
+    return 'oklch(' + l + ' 0.145 ' + (TYPE_HUE[type] || 250) + (a == null ? '' : ' / ' + a) + ')';
+  }
+
+  base() {
+    if (this._base) return this._base;
+    const nodes = ASSETS.map((a, i) => ({ i, name: a[0], type: a[1], path: a[2], deg: 0 }));
+    const byName = {};
+    nodes.forEach(n => byName[n.name] = n);
+    const links = LINKS.map(l => {
+      const s = byName[l[0]], t = byName[l[1]];
+      s.deg++; t.deg++;
+      return { s, t, kind: l[2] };
+    });
+    this._base = { nodes, links, byName };
+    return this._base;
+  }
+
+  sim(w, h, three, seed) {
+    const { nodes, links } = this.base();
+    let s = seed;
+    const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+    const P = nodes.map((n, i) => {
+      const a = (i / nodes.length) * Math.PI * 2;
+      return { x: Math.cos(a) * 200 + rnd() * 60, y: Math.sin(a) * 200 + rnd() * 60, z: three ? (rnd() - 0.5) * 380 : 0, vx: 0, vy: 0, vz: 0 };
+    });
+    const N = nodes.length;
+    for (let it = 0; it < 420; it++) {
+      const damp = 0.86;
+      for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+        let dx = P[j].x - P[i].x, dy = P[j].y - P[i].y, dz = P[j].z - P[i].z;
+        let d2 = dx * dx + dy * dy + dz * dz + 0.01;
+        const d = Math.sqrt(d2);
+        const f = 5200 / d2;
+        const ux = dx / d, uy = dy / d, uz = dz / d;
+        P[i].vx -= ux * f; P[i].vy -= uy * f; P[i].vz -= uz * f;
+        P[j].vx += ux * f; P[j].vy += uy * f; P[j].vz += uz * f;
+      }
+      links.forEach(l => {
+        const a = P[l.s.i], b = P[l.t.i];
+        let dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+        const d = Math.sqrt(dx * dx + dy * dy + dz * dz) + 0.01;
+        const f = (d - 96) * 0.045;
+        const ux = dx / d, uy = dy / d, uz = dz / d;
+        a.vx += ux * f; a.vy += uy * f; a.vz += uz * f;
+        b.vx -= ux * f; b.vy -= uy * f; b.vz -= uz * f;
+      });
+      for (let i = 0; i < N; i++) {
+        P[i].vx -= P[i].x * 0.0016; P[i].vy -= P[i].y * 0.0016; P[i].vz -= P[i].z * 0.004;
+        P[i].x += P[i].vx; P[i].y += P[i].vy; P[i].z += P[i].vz;
+        P[i].vx *= damp; P[i].vy *= damp; P[i].vz *= damp;
+      }
+    }
+    // fit to box
+    const pad = three ? 110 : 92;
+    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    P.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); });
+    const sx = (w - pad * 2) / (maxX - minX), sy = (h - pad * 2) / (maxY - minY);
+    const k = Math.min(sx, sy);
+    P.forEach(p => { p.x = pad + (p.x - minX) * k + (w - pad * 2 - (maxX - minX) * k) / 2; p.y = pad + (p.y - minY) * k + (h - pad * 2 - (maxY - minY) * k) / 2; });
+    return P;
+  }
+
+  render(P, opts) {
+    const { nodes, links } = this.base();
+    const theme = opts.theme || 'dark';
+    const three = !!opts.three;
+    const hi = opts.highlight ? new Set(opts.highlight) : null;
+    const cx = opts.w / 2, cy = opts.h / 2;
+    const proj = P.map(p => {
+      if (!three) return { x: p.x, y: p.y, k: 1 };
+      const k = 620 / (620 + p.z);
+      return { x: cx + (p.x - cx) * k, y: cy + (p.y - cy) * k, k };
+    });
+
+    const outNodes = nodes.map((n, i) => {
+      const p = proj[i];
+      const on = !hi || hi.has(n.name);
+      const r = (5 + Math.min(11, n.deg * 1.05)) * (three ? 0.7 + p.k * 0.55 : 1);
+      const op = on ? 1 : 0.14;
+      const c = this.col(n.type, theme);
+      const isRoot = opts.root === n.name;
+      const showLab = opts.allLabels || isRoot || (on && (n.deg >= 4 || (hi && hi.has(n.name))));
+      const labColor = theme === 'light' ? '#14171c' : '#e7eaee';
+      const halo = isRoot ? ';box-shadow:0 0 0 3px ' + this.col(n.type, theme, 0.28) + ',0 0 22px ' + this.col(n.type, theme, 0.5) : (on && hi ? ';box-shadow:0 0 14px ' + this.col(n.type, theme, 0.45) : '');
+      return {
+        name: n.name,
+        style: 'position:absolute;left:' + p.x.toFixed(1) + 'px;top:' + p.y.toFixed(1) + 'px;transform:translate(-50%,-50%);display:flex;align-items:center;gap:7px;opacity:' + op + ';pointer-events:none;white-space:nowrap',
+        dot: 'width:' + r.toFixed(1) + 'px;height:' + r.toFixed(1) + 'px;flex:none;border-radius:' + (n.type === 'Scene' ? '3px' : n.type === 'Prefab' ? '2px' : '50%') + ';background:' + c + (three ? ';filter:blur(' + Math.max(0, (1 - p.k) * 3.4).toFixed(2) + 'px)' : '') + halo,
+        lab: showLab
+          ? 'font:500 ' + (three ? (9 + p.k * 2.4).toFixed(1) : 11) + 'px \'IBM Plex Mono\',monospace;color:' + (isRoot ? c : labColor) + ';text-shadow:0 1px 3px ' + (theme === 'light' ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.75)')
+          : 'display:none'
+      };
+    });
+
+    const outEdges = links.map(l => {
+      const a = proj[l.s.i], b = proj[l.t.i];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const off = opts.straight ? 0 : len * 0.11;
+      const qx = mx - dy / len * off, qy = my + dx / len * off;
+      const on = !hi || (hi.has(l.s.name) && hi.has(l.t.name));
+      return {
+        d: 'M' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + ' Q' + qx.toFixed(1) + ' ' + qy.toFixed(1) + ' ' + b.x.toFixed(1) + ' ' + b.y.toFixed(1),
+        c: this.col(l.s.type, theme, on ? (hi ? 0.75 : 0.34) : 0.05),
+        w: on && hi ? 1.8 : 1
+      };
+    });
+    return { nodes: outNodes, edges: outEdges };
+  }
+
+  dag(w, h, theme) {
+    const { nodes, links } = this.base();
+    const cols = [[], [], [], []];
+    nodes.forEach(n => cols[DAG_LAYER[n.type] == null ? 3 : DAG_LAYER[n.type]].push(n));
+    const P = [];
+    const colW = w / 4;
+    cols.forEach((list, ci) => {
+      list.sort((a, b) => b.deg - a.deg);
+      list.forEach((n, ri) => {
+        P[n.i] = { x: colW * ci + colW * 0.42, y: 52 + (h - 84) * ((ri + 0.5) / list.length), k: 1 };
+      });
+    });
+    const outNodes = nodes.map((n, i) => {
+      const p = P[i];
+      const c = this.col(n.type, theme);
+      return {
+        name: n.name,
+        style: 'position:absolute;left:' + p.x.toFixed(1) + 'px;top:' + p.y.toFixed(1) + 'px;transform:translateY(-50%);display:flex;align-items:center;gap:7px;padding:3px 8px 3px 6px;border-radius:6px;background:#14181e;border:1px solid #242932;white-space:nowrap;pointer-events:none',
+        dot: 'width:7px;height:7px;flex:none;border-radius:2px;background:' + c,
+        lab: 'font:500 10.5px \'IBM Plex Mono\',monospace;color:#c3c9d3'
+      };
+    });
+    const outEdges = links.map(l => {
+      const a = P[l.s.i], b = P[l.t.i];
+      const mx = (a.x + b.x) / 2;
+      return {
+        d: 'M' + (a.x + 68) + ' ' + a.y.toFixed(1) + ' C' + mx + ' ' + a.y.toFixed(1) + ' ' + mx + ' ' + b.y.toFixed(1) + ' ' + (b.x - 6) + ' ' + b.y.toFixed(1),
+        c: this.col(l.s.type, theme, 0.3),
+        w: 1
+      };
+    });
+    return { nodes: outNodes, edges: outEdges };
+  }
+
+  upstream(name) {
+    const { links } = this.base();
+    const set = new Set([name]);
+    for (let i = 0; i < 6; i++) links.forEach(l => { if (set.has(l.t.name)) set.add(l.s.name); });
+    return Array.from(set);
+  }
+
+  renderVals() {
+    const budget = this.props.nodeBudget ?? 320;
+    const allLabels = this.props.showAllLabels ?? false;
+    const straight = (this.props.edgeStyle ?? 'curved') === 'straight';
+    const key = budget + '|' + allLabels + '|' + straight;
+    if (this._key !== key) {
+      this._key = key;
+      const hi = this.upstream('S_Lit_Custom');
+      this._v = {
+        g2: this.render(this.sim(872, 820, false, 7), { w: 872, h: 820, theme: 'dark', allLabels, straight }),
+        g2l: this.render(this.sim(872, 820, false, 7), { w: 872, h: 820, theme: 'light', highlight: hi, root: 'S_Lit_Custom', allLabels, straight }),
+        g3: this.render(this.sim(1440, 856, true, 19), { w: 1440, h: 856, theme: 'dark', three: true, allLabels, straight }),
+        gd: this.dag(1064, 616, 'dark')
+      };
+    }
+    const D = (t, theme, size) => 'width:' + (size || 8) + 'px;height:' + (size || 8) + 'px;flex:none;border-radius:2px;background:' + this.col(t, theme || 'dark');
+    const counts = { Prefab: 612, Material: 488, Texture: 1204, Script: 731, Scene: 34, Shader: 96, AnimationClip: 402, AudioClip: 288, ScriptableObject: 157, Model: 211 };
+    const budgetPct = Math.max(0, Math.min(1, (budget - 50) / 4950));
+
+    return Object.assign({}, this._v, {
+      budgetLabel: budget.toLocaleString('en-US') + ' nodes',
+      budgetFill: 'position:absolute;left:0;top:0;height:4px;border-radius:3px;width:' + (budgetPct * 100).toFixed(1) + '%;background:oklch(0.72 0.14 250)',
+      budgetKnob: 'position:absolute;top:-4px;left:' + (budgetPct * 100).toFixed(1) + '%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:#e7eaee;border:2px solid oklch(0.72 0.14 250)',
+
+      legend: Object.keys(counts).map(t => ({
+        name: t, count: counts[t].toLocaleString('en-US'), dot: D(t),
+        bar: 'width:' + (12 + counts[t] / 1204 * 26).toFixed(0) + 'px;height:3px;border-radius:2px;background:' + this.col(t, 'dark', 0.45)
+      })),
+      legendL: ['Shader', 'Material', 'Prefab', 'Scene'].map(t => ({
+        name: t, count: t === 'Shader' ? '1' : t === 'Material' ? '3' : t === 'Prefab' ? '5' : '2', dot: D(t, 'light')
+      })),
+
+      hotspots: [
+        { name: 'S_Lit_Custom', type: 'Shader', deg: '3', dot: D('Shader') },
+        { name: 'HealthSystem', type: 'Script', deg: '2', dot: D('Script') },
+        { name: 'M_Metal', type: 'Material', deg: '2', dot: D('Material') },
+        { name: 'HUD_Root', type: 'Prefab', deg: '7', dot: D('Prefab') },
+        { name: 'T_UI_Atlas', type: 'Texture', deg: '2', dot: D('Texture') },
+        { name: 'Anim_Idle', type: 'AnimationClip', deg: '2', dot: D('AnimationClip') }
+      ],
+
+      blast: [
+        { hop: '1 hop', label: 'materials', n: '3', fill: 'height:4px;border-radius:3px;width:22%;background:' + this.col('Material', 'light') },
+        { hop: '2 hops', label: 'prefabs', n: '5', fill: 'height:4px;border-radius:3px;width:38%;background:' + this.col('Prefab', 'light') },
+        { hop: '3 hops', label: 'scenes', n: '2', fill: 'height:4px;border-radius:3px;width:15%;background:' + this.col('Scene', 'light') },
+        { hop: 'total', label: 'assets on path', n: '13', fill: 'height:4px;border-radius:3px;width:100%;background:oklch(0.55 0.16 250)' }
+      ],
+
+      refs: [
+        { name: 'M_Metal', path: 'Assets/Materials/M_Metal.mat', kind: 'USES_SHADER', context: 'm_Shader', dot: D('Material', 'light', 9), kindStyle: 'font:500 9px \'IBM Plex Mono\',monospace;padding:2px 6px;border-radius:4px;background:' + this.col('Shader', 'light', 0.12) + ';color:' + this.col('Shader', 'light') },
+        { name: 'M_PlayerBody', path: 'Assets/Materials/M_PlayerBody.mat', kind: 'USES_SHADER', context: 'm_Shader', dot: D('Material', 'light', 9), kindStyle: 'font:500 9px \'IBM Plex Mono\',monospace;padding:2px 6px;border-radius:4px;background:' + this.col('Shader', 'light', 0.12) + ';color:' + this.col('Shader', 'light') },
+        { name: 'M_EnemySkin', path: 'Assets/Materials/M_EnemySkin.mat', kind: 'USES_SHADER', context: 'm_Shader', dot: D('Material', 'light', 9), kindStyle: 'font:500 9px \'IBM Plex Mono\',monospace;padding:2px 6px;border-radius:4px;background:' + this.col('Shader', 'light', 0.12) + ';color:' + this.col('Shader', 'light') }
+      ],
+
+      results: [['M_Metal', 'Assets/Materials/M_Metal.mat', '2 refs', 'Material', 1], ['M_PlayerBody', 'Assets/Materials/M_PlayerBody.mat', '1 ref', 'Material', 0], ['M_EnemySkin', 'Assets/Materials/M_EnemySkin.mat', '2 refs', 'Material', 0], ['M_Glass', 'Assets/VFX/M_Glass.mat', '1 ref', 'Material', 0], ['M_UI_Blur', 'Assets/UI/M_UI_Blur.mat', '2 refs', 'Material', 0], ['Mesh_Player', 'Assets/Models/Player.fbx', '2 refs', 'Model', 0]].map(r => ({
+        name: r[0], path: r[1], meta: r[2], dot: D(r[3], 'dark', 9),
+        row: 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px' + (r[4] ? ';background:rgba(255,255,255,.06)' : '')
+      })),
+
+      rail: [['◱', 1], ['⌕', 0], ['⌗', 0], ['◈', 0], ['⚑', 0], ['⚙', 0]].map(r => ({
+        k: r[0],
+        style: 'width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;color:' + (r[1] ? '#e7eaee' : '#5a626f') + (r[1] ? ';background:#242932' : '')
+      })),
+
+      dagCols: ['SCENES', 'PREFABS · CONFIG', 'MATERIALS · SCRIPTS · MESHES', 'LEAVES'].map(l => ({
+        label: l,
+        style: 'width:266px;flex:none;display:flex;align-items:center;padding-left:14px;font:600 9px \'IBM Plex Mono\',monospace;letter-spacing:.12em;color:#5a626f;border-right:1px solid #1a1e26'
+      })),
+
+      closure: [
+        { name: 'Textures', n: '9', size: '18.2 MB', dot: D('Texture') },
+        { name: 'Meshes', n: '2', size: '4.1 MB' , dot: D('Model') },
+        { name: 'Materials', n: '3', size: '12 KB', dot: D('Material') },
+        { name: 'Animation', n: '4', size: '1.9 MB', dot: D('AnimationClip') },
+        { name: 'Audio', n: '1', size: '384 KB', dot: D('AudioClip') },
+        { name: 'Scripts', n: '2', size: '9 KB', dot: D('Script') }
+      ],
+
+      kinds: [['USES_MATERIAL', 12, 'Material'], ['USES_TEXTURE', 24, 'Texture'], ['USES_SHADER', 4, 'Shader'], ['NESTED_PREFAB', 11, 'Prefab'], ['USES_SCRIPT', 8, 'Script'], ['USES_MESH', 3, 'Model'], ['SERIALIZED_REF', 9, 'ScriptableObject']].map(k => ({
+        name: k[0], n: k[1],
+        style: 'padding:3px 8px;border-radius:5px;font:500 9.5px \'IBM Plex Mono\',monospace;background:' + this.col(k[2], 'dark', 0.13) + ';color:' + this.col(k[2], 'dark')
+      })),
+
+      rows: [['01', 'Assets/Textures/T_Terrain_Albedo.png', '18.4 MB', '0', 'project', 0], ['02', 'Assets/Textures/T_Sky_Cube.exr', '12.1 MB', '1', 'project', 1], ['03', 'Assets/UI/T_Splash_4K.png', '9.8 MB', '0', 'project', 0], ['04', 'Assets/Textures/T_Metal_MRA.png', '6.2 MB', '2', 'project', 0]].map(r => ({
+        i: r[0], path: r[1], size: r[2], refs: r[3], origin: r[4],
+        dot: 'width:7px;height:7px;flex:none;border-radius:50%;background:' + this.col('Texture', 'dark'),
+        refStyle: r[3] === '0' ? 'color:oklch(0.72 0.16 30)' : 'color:#939bab',
+        style: 'display:grid;grid-template-columns:44px 1fr 110px 92px 100px;padding:5px 14px;border-bottom:1px solid #161a20;font:400 11px \'IBM Plex Mono\',monospace;color:#939bab' + (r[5] ? ';background:rgba(255,255,255,.03)' : '')
+      })),
+
+      steps: [['Discover files', 'done', '4 812 files · 1.2 s'], ['Parse .meta GUIDs', 'done', '4 812 · 0.8 s'], ['Scan YAML references', 'active', '3 108 / 4 812'], ['Resolve + write index.db', 'idle', '—']].map(s => ({
+        name: s[0], meta: s[2],
+        glyph: s[1] === 'done' ? '✓' : s[1] === 'active' ? '›' : '·',
+        mark: 'width:15px;height:15px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:4px;font-size:9px;' + (s[1] === 'done' ? 'background:oklch(0.72 0.14 145 / .16);color:oklch(0.75 0.14 145)' : s[1] === 'active' ? 'background:oklch(0.72 0.14 250 / .18);color:oklch(0.75 0.14 250)' : 'background:#181c22;color:#4c5462'),
+        text: 'font-size:11.5px;color:' + (s[1] === 'idle' ? '#4c5462' : '#c3c9d3')
+      })),
+
+      broken: [
+        { from: 'Level_02.unity', kind: 'MISSING', guid: 'a41f…9c02', context: 'm_Materials[2]', dot: D('Scene', 'dark', 8) },
+        { from: 'Enemy_Brute.prefab', kind: 'MISSING', guid: '77bd…1e4a', context: 'm_Script', dot: D('Prefab', 'dark', 8) },
+        { from: 'M_UI_Blur.mat', kind: 'MISSING', guid: '0c93…f5d1', context: '_MainTex', dot: D('Material', 'dark', 8) },
+        { from: 'AC_Enemy.controller', kind: 'MISSING', guid: 'be20…7730', context: 'm_Motion', dot: D('AnimatorController', 'dark', 8) }
+      ],
+
+      themes: [
+        { name: 'Dark', badgeText: 'default', note: 'Canvas is the darkest surface so node hues carry the signal; panels lift one step.', bg: '#0b0d10', panel: '#121519', raised: '#181c22', border: '#242932', text: '#e7eaee', dim: '#626b79', theme: 'dark' },
+        { name: 'Light', badgeText: 'ok in daylight', note: 'Same hues at lower lightness; canvas stays off-white so white panels still read as raised.', bg: '#eef0f3', panel: '#ffffff', raised: '#f7f8fa', border: '#e0e4ea', text: '#14171c', dim: '#8d95a1', theme: 'light' },
+        { name: 'System', badgeText: 'follows OS', note: 'Auto tracks prefers-color-scheme and re-tints edges/nodes on switch — no reload, no layout change.', bg: 'linear-gradient(115deg,#0b0d10 0 50%,#eef0f3 50% 100%)', panel: 'linear-gradient(115deg,#121519 0 50%,#ffffff 50% 100%)', raised: 'linear-gradient(115deg,#181c22 0 50%,#f7f8fa 50% 100%)', border: 'linear-gradient(115deg,#242932 0 50%,#e0e4ea 50% 100%)', text: 'linear-gradient(115deg,#e7eaee 0 50%,#14171c 50% 100%)', dim: 'linear-gradient(115deg,#626b79 0 50%,#8d95a1 50% 100%)', theme: 'dark' }
+      ].map(t => ({
+        name: t.name, note: t.note, badgeText: t.badgeText,
+        card: 'flex:1;padding:16px;border-radius:11px;border:1px solid #e0e4ea;background:#fbfcfd',
+        title: 'font:600 13px \'IBM Plex Sans\',sans-serif;color:#14171c',
+        badge: 'font:500 9.5px \'IBM Plex Mono\',monospace;letter-spacing:.06em;padding:3px 7px;border-radius:5px;background:#eef0f3;color:#5d6570',
+        desc: 'margin-top:7px;font-size:11.5px;line-height:1.55;color:#5d6570;min-height:52px',
+        rowLabel: 'margin-top:8px;font:400 9px \'IBM Plex Mono\',monospace;letter-spacing:.04em;color:#8d95a1',
+        swatches: [t.bg, t.panel, t.raised, t.border, t.text, t.dim].map(c => ({
+          style: 'flex:1;height:34px;border-radius:7px;border:1px solid rgba(0,0,0,.12);background:' + c
+        })),
+        chips: ['Scene', 'Prefab', 'Material', 'Texture', 'Script', 'Shader', 'AudioClip', 'Model'].map(ty => ({
+          name: ty,
+          style: 'display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:5px;font:500 10px \'IBM Plex Mono\',monospace;background:' + this.col(ty, t.theme, 0.11) + ';color:' + this.col(ty, 'light'),
+          dot: 'width:6px;height:6px;border-radius:2px;background:' + this.col(ty, 'light')
+        }))
+      }))
+    });
+  }
+}
+</script>
+</body>
+</html>
