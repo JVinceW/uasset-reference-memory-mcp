@@ -46,3 +46,13 @@ product contract lives in `docs/product/`.
 ## Next Work
 
 No epic is currently selected for implementation.
+
+## Intake Todo
+
+- Unity Editor graph viewer: an in-Unity `EditorWindow` view, similar in purpose
+  to the local web viewer, so developers can inspect asset dependency
+  neighborhoods directly inside Unity without opening a browser. Needs intake
+  and design before slicing; likely questions include whether it reuses the
+  existing SQLite index/query contracts, how the Unity package accesses
+  `.asset-memory/index.db`, and which viewer features are required for a first
+  editor-native pass.
