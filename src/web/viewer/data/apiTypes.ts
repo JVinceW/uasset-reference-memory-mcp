@@ -1,7 +1,105 @@
 export interface Overview {
   totalAssets: number;
+  byType: Record<string, number>;
+  byOrigin: Record<string, number>;
   edgeCount: number;
   unresolvedCount: number;
-  typeCounts?: Record<string, number>;
-  originCounts?: Record<string, number>;
+  brokenRefGuids: number;
+  topReferenced: TopReferencedAsset[];
+}
+
+export interface TopReferencedAsset {
+  path: string;
+  name: string;
+  refCount: number;
+}
+
+export type AssetType =
+  | "Prefab"
+  | "Scene"
+  | "Material"
+  | "Texture"
+  | "Script"
+  | "Shader"
+  | "AnimationClip"
+  | "AnimatorController"
+  | "ScriptableObject"
+  | "Sprite"
+  | "AudioClip"
+  | "Font"
+  | "Model"
+  | "Folder"
+  | "Other";
+
+export type Origin = "project" | "package" | "builtin";
+
+export interface AssetNode {
+  guid: string;
+  path: string;
+  name: string;
+  assetType: AssetType;
+  origin: Origin;
+  packageId: string | null;
+  fileSize: number | null;
+  mtime: number | null;
+  isBinary: boolean;
+}
+
+export interface SearchFilters {
+  name?: string;
+  type?: AssetType;
+  pathPrefix?: string;
+  origin?: Origin;
+  minRefs?: number;
+  maxRefs?: number;
+  limit?: number;
+}
+
+export interface CyNode {
+  data: {
+    id: string;
+    label: string;
+    type: AssetType;
+    origin: Origin;
+    path: string;
+    distance: number;
+  };
+}
+
+export interface CyEdge {
+  data: {
+    id: string;
+    source: string;
+    target: string;
+    kind: string;
+    context: string | null;
+  };
+}
+
+export interface Neighborhood {
+  rootId: string;
+  nodes: CyNode[];
+  edges: CyEdge[];
+}
+
+export interface EdgeDetail {
+  from: string;
+  to: string;
+  refKind: string;
+  context: string | null;
+  fileId: string | null;
+  count: number;
+}
+
+export interface EdgeFilters {
+  from?: string;
+  to?: string;
+  kind?: string;
+  limit?: number;
+}
+
+export interface UnusedFilters {
+  scope?: string;
+  includeScripts?: boolean;
+  addressableRoots?: "auto" | "on" | "off";
 }
