@@ -29,6 +29,25 @@ Force Text** (Unity's default for version control).
 npm install -g unity-asset-reference-mcp
 ```
 
+Installer scripts are also available for users who prefer one command with
+Node/npm checks and command verification:
+
+```bash
+# Linux/macOS, from a cloned repo
+sh scripts/install.sh
+
+# Linux/macOS, from GitHub
+curl -fsSL https://raw.githubusercontent.com/JVinceW/uasset-reference-memory-mcp/main/scripts/install.sh | sh
+```
+
+```powershell
+# Windows PowerShell, from a cloned repo
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
+
+# Windows PowerShell, from GitHub
+irm https://raw.githubusercontent.com/JVinceW/uasset-reference-memory-mcp/main/scripts/install.ps1 | iex
+```
+
 This puts three commands on your `PATH`:
 
 | Command | What |

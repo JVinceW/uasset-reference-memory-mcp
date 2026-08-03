@@ -31,6 +31,8 @@
   },
   "files": [
     "dist",
+    "scripts/install.ps1",
+    "scripts/install.sh",
     "README.md",
     "LICENSE"
   ],
