@@ -24,6 +24,7 @@ function buildStore(): GraphStore {
     { ...node(g("d"), "Packages/pkg/D.prefab"), origin: "package", packageId: "pkg" },
   ]);
   store.insertEdges([edge(g("a"), g("b")), edge(g("b"), g("c"))]);
+  store.insertUnresolved([{ fromGuid: g("a"), toGuid: g("z"), context: "m_MissingMaterial" }]);
   return store;
 }
 
@@ -45,7 +46,7 @@ describe("handleApi", () => {
       indexedAt: "2026-08-03T00:00:00.000Z",
       assetCount: 4,
       edgeCount: 2,
-      unresolvedCount: 0,
+      unresolvedCount: 1,
       expectedSchemaVersion: 3,
     });
     store.close();
@@ -134,6 +135,25 @@ describe("handleApi", () => {
     const store = buildStore();
     const res = handleApi(store, "/api/root-trace", { ref: "nope", dir: "deps" });
     expect(res.status).toBe(404);
+    store.close();
+  });
+
+  test("GET /api/broken-references returns source asset and missing target context", () => {
+    const store = buildStore();
+    const res = handleApi(store, "/api/broken-references", { limit: "10" });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      {
+        fromGuid: g("a"),
+        fromPath: "Assets/A.prefab",
+        fromName: "A.prefab",
+        fromType: "Prefab",
+        fromOrigin: "project",
+        toGuid: g("z"),
+        context: "m_MissingMaterial",
+        count: 1,
+      },
+    ]);
     store.close();
   });
 

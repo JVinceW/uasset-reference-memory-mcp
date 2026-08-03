@@ -109,6 +109,17 @@ export interface RootTrace extends Neighborhood {
   byDistance: Record<string, number>;
 }
 
+export interface BrokenReference {
+  fromGuid: string;
+  fromPath: string | null;
+  fromName: string | null;
+  fromType: AssetType | null;
+  fromOrigin: Origin | null;
+  toGuid: string;
+  context: string | null;
+  count: number;
+}
+
 export interface EdgeDetail {
   from: string;
   to: string;

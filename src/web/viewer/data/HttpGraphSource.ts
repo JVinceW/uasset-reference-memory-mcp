@@ -2,6 +2,7 @@ import type { GraphSource } from "./GraphSource";
 import type {
   AssetNode,
   AssetDetail,
+  BrokenReference,
   EdgeDetail,
   EdgeFilters,
   GraphFilters,
@@ -56,6 +57,10 @@ export class HttpGraphSource implements GraphSource {
 
   async getRootTrace(ref: string, dir: "deps" | "refs", depth: number, limit: number): Promise<RootTrace> {
     return this.get("/api/root-trace", { ref, dir, depth, limit });
+  }
+
+  async getBrokenReferences(limit = 100): Promise<BrokenReference[]> {
+    return this.get("/api/broken-references", { limit });
   }
 
   async getUnused(filters: UnusedFilters): Promise<AssetNode[]> {

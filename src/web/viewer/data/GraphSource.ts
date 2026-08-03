@@ -1,6 +1,7 @@
 import type {
   AssetNode,
   AssetDetail,
+  BrokenReference,
   EdgeDetail,
   EdgeFilters,
   GraphFilters,
@@ -23,5 +24,6 @@ export interface GraphSource {
   getEdges(filters: EdgeFilters): Promise<EdgeDetail[]>;
   tracePath(from: string, to: string): Promise<Neighborhood>;
   getRootTrace(ref: string, dir: "deps" | "refs", depth: number, limit: number): Promise<RootTrace>;
+  getBrokenReferences(limit?: number): Promise<BrokenReference[]>;
   getUnused(filters: UnusedFilters): Promise<AssetNode[]>;
 }

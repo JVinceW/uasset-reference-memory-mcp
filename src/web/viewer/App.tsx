@@ -2,7 +2,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight, Copy, Database, Moon, Refresh
 import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, JSX } from "react";
-import type { AssetNode, AssetType, EdgeDetail, Neighborhood, Origin, Overview } from "./data/apiTypes";
+import type { AssetNode, AssetType, BrokenReference, EdgeDetail, Neighborhood, Origin, Overview } from "./data/apiTypes";
 import { HttpGraphSource } from "./data/HttpGraphSource";
 import { buildGraphLayout } from "./graph/graphModel";
 import { ASSET_HUES } from "./graph/graphTheme";
@@ -14,6 +14,7 @@ const HUES = ASSET_HUES;
 const ThreeGraphCanvas = lazy(() =>
   import("./graph/ThreeGraphCanvas").then((module) => ({ default: module.ThreeGraphCanvas })),
 );
+type AttentionMode = "broken" | "unused" | null;
 
 export function App(): JSX.Element {
   const engine = useViewerStore((state) => state.engine);
@@ -40,6 +41,7 @@ export function App(): JSX.Element {
   const historyIndex = useViewerStore((state) => state.historyIndex);
   const history = useViewerStore((state) => state.history);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [attentionMode, setAttentionMode] = useState<AttentionMode>(null);
   const activeTypes = useMemo(
     () => ASSET_TYPES.filter((type) => typeFilters[type]),
     [typeFilters],
@@ -99,6 +101,12 @@ export function App(): JSX.Element {
   const unused = useQuery({
     queryKey: ["unused"],
     queryFn: () => source.getUnused({ addressableRoots: "auto" }),
+    enabled: false,
+    retry: false,
+  });
+  const brokenReferences = useQuery({
+    queryKey: ["broken-references"],
+    queryFn: () => source.getBrokenReferences(100),
     enabled: false,
     retry: false,
   });
@@ -282,20 +290,42 @@ export function App(): JSX.Element {
           )}
           <section>
             <h2>Needs Attention</h2>
-            <button className="attention-card danger" onClick={() => void unused.refetch()}>
+            <button
+              className={`attention-card danger ${attentionMode === "broken" ? "active" : ""}`}
+              onClick={() => {
+                setAttentionMode("broken");
+                void brokenReferences.refetch();
+              }}
+            >
               <AlertTriangle size={15} />
               <div>
-                <strong>{fmtNumber(totals?.unresolvedCount)} broken references</strong>
+                <strong>
+                  {brokenReferences.isFetching ? "Loading broken refs..." : `${fmtNumber(totals?.unresolvedCount)} broken references`}
+                </strong>
                 <span>Missing GUID targets from unresolved_refs.</span>
               </div>
             </button>
-            <button className="attention-card warning" onClick={() => void unused.refetch()}>
+            <button
+              className={`attention-card warning ${attentionMode === "unused" ? "active" : ""}`}
+              onClick={() => {
+                setAttentionMode("unused");
+                void unused.refetch();
+              }}
+            >
               <AlertTriangle size={15} />
               <div>
                 <strong>{unused.isFetching ? "Finding unused..." : `${fmtNumber(unused.data?.length)} unused candidates`}</strong>
                 <span>Addressables-aware; verify vs. code loads.</span>
               </div>
             </button>
+            <AttentionResults
+              broken={brokenReferences.data ?? []}
+              brokenError={brokenReferences.isError}
+              mode={attentionMode}
+              onSelect={selectRef}
+              unused={unused.data ?? []}
+              unusedError={unused.isError}
+            />
           </section>
         </aside>
       </div>
@@ -513,6 +543,69 @@ function EdgeList(props: {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function AttentionResults(props: {
+  broken: BrokenReference[];
+  brokenError: boolean;
+  mode: AttentionMode;
+  onSelect(ref: string): void;
+  unused: AssetNode[];
+  unusedError: boolean;
+}): JSX.Element | null {
+  if (!props.mode) return null;
+
+  if (props.mode === "broken") {
+    if (props.brokenError) return <p className="attention-empty">Could not load broken references.</p>;
+    if (props.broken.length === 0) return <p className="attention-empty">No broken reference rows loaded.</p>;
+
+    return (
+      <div className="attention-results">
+        <div className="attention-title">Top Broken References</div>
+        {props.broken.slice(0, 24).map((item) => {
+          const source = item.fromName ?? item.fromPath ?? item.fromGuid;
+          return (
+            <button
+              className="attention-row"
+              disabled={!item.fromPath && !item.fromGuid}
+              key={`${item.fromGuid}-${item.toGuid}-${item.context ?? ""}`}
+              onClick={() => props.onSelect(item.fromPath ?? item.fromGuid)}
+              type="button"
+            >
+              <strong>{source}</strong>
+              <small>{item.fromPath ?? item.fromGuid}</small>
+              <span>
+                {item.fromType ? <code>{item.fromType}</code> : null}
+                <code>missing {shortGuid(item.toGuid)}</code>
+                <code>{item.context ?? "context -"}</code>
+                {item.count > 1 ? <code>x{item.count}</code> : null}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (props.unusedError) return <p className="attention-empty">Could not load unused candidates.</p>;
+  if (props.unused.length === 0) return <p className="attention-empty">No unused candidates loaded.</p>;
+
+  return (
+    <div className="attention-results">
+      <div className="attention-title">Largest Unused Candidates</div>
+      {props.unused.slice(0, 24).map((asset) => (
+        <button className="attention-row" key={asset.guid} onClick={() => props.onSelect(asset.guid)} type="button">
+          <strong>{asset.name}</strong>
+          <small>{asset.path}</small>
+          <span>
+            <code>{asset.assetType}</code>
+            <code>{fmtBytes(asset.fileSize)}</code>
+            <code>{asset.origin}</code>
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

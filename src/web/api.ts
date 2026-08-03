@@ -7,6 +7,7 @@ import { getOverview, searchAssets } from "../query/search.js";
 import type { AssetType, Origin } from "../indexer/types.js";
 import {
   getAssetDetail,
+  getBrokenReferences,
   getBudgetedGraph,
   getIndexStatus,
   getRootTrace,
@@ -97,6 +98,9 @@ export function handleApi(db: QueryDb, pathname: string, params: Params): ApiRes
         ? ok(trace)
         : { status: 404, body: { error: "not-found" } };
     }
+
+    case "/api/broken-references":
+      return ok(getBrokenReferences(db, intOrUndef(params.limit) ?? 100));
 
     case "/api/edges":
       return ok(

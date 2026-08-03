@@ -75,6 +75,17 @@ export interface RootTrace extends ViewerGraph {
   byDistance: Record<string, number>;
 }
 
+export interface BrokenReference {
+  fromGuid: string;
+  fromPath: string | null;
+  fromName: string | null;
+  fromType: AssetType | null;
+  fromOrigin: Origin | null;
+  toGuid: string;
+  context: string | null;
+  count: number;
+}
+
 interface RankedNodeRow extends Record<string, unknown> {
   degree: number;
   inbound: number;
@@ -194,6 +205,43 @@ export function getRootTrace(
     depth,
     byDistance,
   };
+}
+
+export function getBrokenReferences(db: QueryDb, limit = 100): BrokenReference[] {
+  const capped = clampLimit(limit, 1, 500);
+  return db.all(
+    `SELECT
+       u.from_guid AS fromGuid,
+       a.path AS fromPath,
+       a.name AS fromName,
+       a.asset_type AS fromType,
+       a.origin AS fromOrigin,
+       u.to_guid AS toGuid,
+       u.context AS context,
+       COUNT(*) AS count
+     FROM unresolved_refs u
+     LEFT JOIN assets a ON a.guid = u.from_guid
+     GROUP BY
+       u.from_guid,
+       a.path,
+       a.name,
+       a.asset_type,
+       a.origin,
+       u.to_guid,
+       u.context
+     ORDER BY count DESC, a.path, u.to_guid, u.context
+     LIMIT ?`,
+    [capped],
+  ).map((row) => ({
+    fromGuid: row.fromGuid as string,
+    fromPath: (row.fromPath as string | null) ?? null,
+    fromName: (row.fromName as string | null) ?? null,
+    fromType: (row.fromType as AssetType | null) ?? null,
+    fromOrigin: (row.fromOrigin as Origin | null) ?? null,
+    toGuid: row.toGuid as string,
+    context: (row.context as string | null) ?? null,
+    count: (row.count as number | undefined) ?? 1,
+  }));
 }
 
 function rankedNodeToViewer(row: RankedNodeRow, distance: number): ViewerNode {

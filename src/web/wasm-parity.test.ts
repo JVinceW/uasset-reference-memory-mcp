@@ -40,6 +40,7 @@ describe("query layer parity: better-sqlite3 vs sql.js (WASM)", () => {
       node(g("c"), "Assets/C.png", "Texture"),
     ]);
     store.insertEdges([edge(g("a"), g("b")), edge(g("b"), g("c"))]);
+    store.insertUnresolved([{ fromGuid: g("a"), toGuid: g("z"), context: "m_MissingMaterial" }]);
 
     const SQL = await initSqlJs({
       locateFile: () =>
@@ -56,6 +57,7 @@ describe("query layer parity: better-sqlite3 vs sql.js (WASM)", () => {
       ["/api/graph", { origins: "project", limit: "2" }],
       ["/api/neighborhood", { ref: "Assets/A.prefab", dir: "deps", depth: "2" }],
       ["/api/root-trace", { ref: "Assets/C.png", dir: "refs", depth: "2" }],
+      ["/api/broken-references", { limit: "10" }],
       ["/api/trace", { from: "Assets/A.prefab", to: "Assets/C.png" }],
     ] as const) {
       const server = handleApi(store, path, params);

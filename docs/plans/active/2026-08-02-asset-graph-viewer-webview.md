@@ -577,4 +577,22 @@ Responsibilities:
   screenshot was 991,350 bytes, and the UI showed `mode: 3D`, `320 shown`, and
   `31,926 total`.
 
+2026-08-03 attention panel follow-up:
+
+- Fixed the `Needs Attention` cards so clicks produce visible inspector
+  results instead of only issuing a background unused-assets request.
+- Added `/api/broken-references` to list unresolved reference rows with source
+  asset, missing target GUID, context, and count.
+- Added active card state and expanded result rows for broken references and
+  unused candidates. Result rows navigate to the related source or candidate
+  asset.
+- Validation: `npm run typecheck` passed; focused API/WASM/viewer tests passed
+  with 4 files and 21 tests; full `npm test` passed with 41 test files and 312
+  tests; `npm run build` passed.
+- Browser smoke test against
+  `http://localhost:7777/viewer-next/index.html` using the Cricket slot-4
+  index passed: clicking broken references rendered 24 result rows headed
+  `Top Broken References`; clicking unused candidates rendered 24 result rows
+  headed `Largest Unused Candidates`.
+
 Complete after the full implementation and validation.

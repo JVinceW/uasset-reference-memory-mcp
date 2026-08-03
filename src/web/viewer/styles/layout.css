@@ -740,7 +740,8 @@ h2 {
 }
 
 .attention-card:hover,
-.attention-card:focus-visible {
+.attention-card:focus-visible,
+.attention-card.active {
   filter: brightness(1.12);
 }
 
@@ -768,6 +769,66 @@ h2 {
   border: 1px solid oklch(0.75 0.14 80 / 0.25);
   background: oklch(0.75 0.14 80 / 0.09);
   color: var(--warning);
+}
+
+.attention-results {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.attention-title,
+.attention-empty {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
+.attention-empty {
+  margin: 10px 0 0;
+}
+
+.attention-row {
+  display: grid;
+  width: 100%;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--text-secondary);
+  text-align: left;
+}
+
+.attention-row:hover,
+.attention-row:focus-visible {
+  color: var(--text);
+  filter: brightness(1.08);
+}
+
+.attention-row strong,
+.attention-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attention-row small {
+  color: var(--faint);
+  font-size: 10.5px;
+}
+
+.attention-row span {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.attention-row code {
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
 }
 
 .query-bar {
