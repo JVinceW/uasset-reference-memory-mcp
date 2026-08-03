@@ -66,7 +66,6 @@ In scope:
 
 Out of scope for the first implementation pass:
 
-- 3D galaxy mode as a required shipping feature.
 - Full DAG mode as a required shipping feature.
 - A raw unrestricted SQL MCP tool.
 - Backend authentication, cloud hosting, telemetry, or external services.
@@ -90,8 +89,43 @@ Out of scope for the first implementation pass:
 
 Build the new viewer in layers. First add a frontend build harness that can
 coexist with the current Node build, then lock a shared data contract, then ship
-the 2D workbench with real data. Leave expensive secondary surfaces, especially
-3D, until the core workbench is useful and verified.
+the 2D workbench with real data. Add 3D as a separate renderer behind the
+existing engine switch so selection, search, filters, inspector data, and trace
+behavior remain shared across renderers.
+
+## 3D Renderer Plan
+
+3D mode will use a custom Three.js renderer through React Three Fiber, not
+`react-force-graph-3d`.
+
+Implementation order:
+
+1. Add `three`, `@react-three/fiber`, and `@types/three`. Keep Drei and
+   postprocessing out of the first slice unless a concrete control or visual
+   effect requires them.
+2. Extract graph normalization and deterministic layout into
+   `src/web/viewer/graph/graphModel.ts`.
+3. Keep layout deterministic in the first pass:
+   - overview graphs use a degree-weighted sphere/cloud layout;
+   - selected traces use distance shells around the selected root;
+   - no force simulation runs in the React render loop.
+4. Add `src/web/viewer/graph/ThreeGraphCanvas.tsx`.
+5. Render nodes with instancing or point buffers and render edges with a single
+   `LineSegments` geometry.
+6. Keep labels limited to selected and hovered nodes.
+7. Route only `engine === "3d"` to the Three.js canvas. Keep the existing 2D
+   path and all API wiring unchanged.
+8. Validate with unit tests for graph normalization/layout plus browser
+   evidence that the WebGL canvas is nonblank, correctly framed, and clickable.
+
+Performance constraints:
+
+- Do not create one React component per graph node or edge.
+- Do not recompute layout for theme, hover, or selection changes.
+- Keep the current 5000-node budget cap until runtime measurements justify a
+  higher ceiling.
+- Add a backend `/api/layout3d` only after the frontend renderer is measured on
+  real indexes and proves layout work is the bottleneck.
 
 ## Functional Wiring Plan
 
@@ -274,6 +308,8 @@ Responsibilities:
 - [ ] Phase 7: Implement query drawer as an approved local viewer feature.
 - [ ] Phase 8: Add responsive states and browser visual validation.
 - [ ] Phase 9: Update docs, package proof, and complete this plan.
+- [x] Phase 10: Implement custom Three.js 3D mode behind the existing engine
+  switch.
 
 ## Detailed Steps
 
@@ -437,6 +473,11 @@ Responsibilities:
 - 2026-08-02: Keep the current Cytoscape viewer as the default shipped web
   entry during the first build-harness slice; emit the new React workbench to
   `dist/web/public/viewer-next/` until graph parity is ready.
+- 2026-08-03: Implement 3D mode with custom Three.js through React Three Fiber,
+  not `react-force-graph-3d`, to keep control over batching, layout, labels,
+  and high-node-count performance. Keep optional Drei/Postprocessing
+  dependencies deferred so the first 3D slice does not expand the package tree
+  beyond what the renderer needs.
 
 ## Validation
 
@@ -510,5 +551,30 @@ Responsibilities:
   graph nodes with 31,926 total candidates, GUID-prefix search selected
   `P_CricketCommonUI.prefab`, `REFS` trace rendered, edge metadata was visible,
   and there were no app-origin console errors.
+
+2026-08-03 Three.js 3D mode slice:
+
+- Added the core Three.js stack only: `three`, `@react-three/fiber`, and
+  `@types/three`.
+- Deferred Drei and postprocessing so the first 3D implementation does not add
+  avoidable transitive dependencies or stricter Node engine requirements.
+- Added shared graph theme and deterministic graph layout helpers under
+  `src/web/viewer/graph/`.
+- Added a lazy-loaded `ThreeGraphCanvas` behind the existing `3D` engine
+  switch.
+- Rendered nodes as one Three.js `InstancedMesh`, edges as one
+  `LineSegments` buffer geometry, and camera interaction through
+  Three.js `OrbitControls`.
+- Kept 2D as the default mode and code-split the 3D renderer so the default
+  bundle remains separate from the Three.js chunk.
+- Validation: `npm run typecheck` passed; `npm test` passed with 41 test files
+  and 311 tests; `npm run build` passed and emitted a 258.24 kB main viewer
+  chunk plus a lazy 915.00 kB `ThreeGraphCanvas` chunk.
+- Browser smoke test against
+  `http://localhost:7777/viewer-next/index.html` using the Cricket slot-4
+  index passed with system Chrome: switching to `3D` created an 872x820 WebGL
+  canvas, `canvas.toDataURL()` returned nonblank image data, the canvas
+  screenshot was 991,350 bytes, and the UI showed `mode: 3D`, `320 shown`, and
+  `31,926 total`.
 
 Complete after the full implementation and validation.

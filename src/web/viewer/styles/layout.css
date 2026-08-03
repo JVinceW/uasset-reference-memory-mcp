@@ -377,6 +377,7 @@ h2 {
 
 .canvas-chip-row {
   position: absolute;
+  z-index: 3;
   top: 12px;
   left: 12px;
   display: flex;
@@ -686,6 +687,15 @@ h2 {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.three-graph {
+  position: absolute;
+  inset: 0;
+}
+
+.three-graph canvas {
+  display: block;
 }
 
 .graph-edge {

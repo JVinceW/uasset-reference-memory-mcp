@@ -1,30 +1,19 @@
 import { AlertTriangle, ChevronLeft, ChevronRight, Copy, Database, Moon, RefreshCw, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, JSX } from "react";
-import type { AssetNode, AssetType, CyEdge, CyNode, EdgeDetail, Neighborhood, Origin, Overview } from "./data/apiTypes";
+import type { AssetNode, AssetType, EdgeDetail, Neighborhood, Origin, Overview } from "./data/apiTypes";
 import { HttpGraphSource } from "./data/HttpGraphSource";
+import { buildGraphLayout } from "./graph/graphModel";
+import { ASSET_HUES } from "./graph/graphTheme";
 import { ASSET_TYPES, ORIGINS, useViewerStore, type Engine, type Theme, type TraceDir } from "./state/viewerStore";
 import { fmtBytes, fmtNumber, shortGuid } from "./utils/format";
 
 const source = new HttpGraphSource();
-const HUES: Record<AssetType, number> = {
-  Scene: 250,
-  Prefab: 195,
-  Material: 300,
-  Texture: 80,
-  Script: 145,
-  Shader: 340,
-  AnimationClip: 160,
-  AnimatorController: 175,
-  ScriptableObject: 265,
-  Sprite: 20,
-  AudioClip: 40,
-  Font: 110,
-  Model: 220,
-  Folder: 0,
-  Other: 0,
-};
+const HUES = ASSET_HUES;
+const ThreeGraphCanvas = lazy(() =>
+  import("./graph/ThreeGraphCanvas").then((module) => ({ default: module.ThreeGraphCanvas })),
+);
 
 export function App(): JSX.Element {
   const engine = useViewerStore((state) => state.engine);
@@ -41,6 +30,8 @@ export function App(): JSX.Element {
   const setTraceDir = useViewerStore((state) => state.setTraceDir);
   const selectedRef = useViewerStore((state) => state.selectedRef);
   const selectRef = useViewerStore((state) => state.selectRef);
+  const hoverGuid = useViewerStore((state) => state.hoverGuid);
+  const setHoverGuid = useViewerStore((state) => state.setHoverGuid);
   const searchTerm = useViewerStore((state) => state.searchTerm);
   const setSearchTerm = useViewerStore((state) => state.setSearchTerm);
   const searchOpen = useViewerStore((state) => state.searchOpen);
@@ -260,8 +251,10 @@ export function App(): JSX.Element {
             activeTypes={typeFilters}
             engine={engine}
             graph={displayedGraph}
+            hoverGuid={hoverGuid}
             loading={graphLoading}
             selectedGuid={selectedDetail.data?.asset.guid ?? null}
+            onHover={setHoverGuid}
             onSelect={selectRef}
           />
         </main>
@@ -529,11 +522,13 @@ function NeighborhoodCanvas(props: {
   activeTypes: Record<AssetType, boolean>;
   engine: Engine;
   graph: Neighborhood | undefined;
+  hoverGuid: string | null;
   loading: boolean;
+  onHover(ref: string | null): void;
   selectedGuid: string | null;
   onSelect(ref: string): void;
 }): JSX.Element {
-  const layout = useMemo(() => buildLayout(props.graph, props.activeTypes, props.activeOrigins), [
+  const layout = useMemo(() => buildGraphLayout(props.graph, props.activeTypes, props.activeOrigins), [
     props.activeOrigins,
     props.activeTypes,
     props.graph,
@@ -547,29 +542,57 @@ function NeighborhoodCanvas(props: {
     return <div className="graph-empty">Search or choose a hotspot to draw a neighborhood.</div>;
   }
 
+  if (props.engine === "3d") {
+    return (
+      <Suspense fallback={<div className="graph-empty">Loading 3D renderer...</div>}>
+        <ThreeGraphCanvas
+          hoverGuid={props.hoverGuid}
+          layout={layout}
+          onHover={props.onHover}
+          onSelect={props.onSelect}
+          selectedGuid={props.selectedGuid}
+        />
+      </Suspense>
+    );
+  }
+
+  if (props.engine === "dag") {
+    return (
+      <div className="graph-empty">
+        DAG mode is reserved for a dependency-rank layout. Use 2D or 3D for the current graph.
+      </div>
+    );
+  }
+
+  const svgScale = Math.min(1.18, 290 / layout.sceneRadius);
+  const svgX = (x: number): number => 500 + x * svgScale;
+  const svgY = (y: number): number => 325 + y * svgScale;
+
   return (
     <svg aria-label={`${props.engine} asset graph`} className="graph-svg" role="img" viewBox="0 0 1000 650">
       {layout.edges.map((edge) => {
-        const from = layout.nodesById.get(edge.data.source);
-        const to = layout.nodesById.get(edge.data.target);
+        const from = layout.nodesById.get(edge.source);
+        const to = layout.nodesById.get(edge.target);
         if (!from || !to) return null;
         return (
           <line
             className="graph-edge"
-            key={edge.data.id}
-            x1={from.x}
-            x2={to.x}
-            y1={from.y}
-            y2={to.y}
+            key={edge.id}
+            x1={svgX(from.x)}
+            x2={svgX(to.x)}
+            y1={svgY(from.y)}
+            y2={svgY(to.y)}
             style={{ "--edge-hue": HUES[from.type] } as CSSProperties}
           />
         );
       })}
       {layout.nodes.map((node) => {
         const selected = node.id === props.selectedGuid;
-        const size = node.id === props.graph?.rootId ? 18 : 11;
+        const size = node.isRoot ? 18 : Math.max(8, Math.min(14, node.radius + 4));
         const common = {
           className: `graph-node-hit ${selected ? "selected" : ""}`,
+          onMouseEnter: () => props.onHover(node.id),
+          onMouseLeave: () => props.onHover(null),
           onClick: () => props.onSelect(node.id),
           onDoubleClick: () => props.onSelect(node.id),
         };
@@ -582,19 +605,19 @@ function NeighborhoodCanvas(props: {
                 rx={node.type === "Scene" ? 3 : 2}
                 style={{ "--type-hue": HUES[node.type] } as CSSProperties}
                 width={size * 2}
-                x={node.x - size}
-                y={node.y - size}
+                x={svgX(node.x) - size}
+                y={svgY(node.y) - size}
               />
             ) : (
               <circle
                 {...common}
-                cx={node.x}
-                cy={node.y}
+                cx={svgX(node.x)}
+                cy={svgY(node.y)}
                 r={size}
                 style={{ "--type-hue": HUES[node.type] } as CSSProperties}
               />
             )}
-            <text className="graph-label" x={node.x + size + 7} y={node.y + 4}>
+            <text className="graph-label" x={svgX(node.x) + size + 7} y={svgY(node.y) + 4}>
               {node.label}
             </text>
           </g>
@@ -602,53 +625,4 @@ function NeighborhoodCanvas(props: {
       })}
     </svg>
   );
-}
-
-interface LayoutNode {
-  id: string;
-  label: string;
-  type: AssetType;
-  x: number;
-  y: number;
-}
-
-function buildLayout(
-  graph: Neighborhood | undefined,
-  activeTypes: Record<AssetType, boolean>,
-  activeOrigins: Record<Origin, boolean>,
-): { edges: CyEdge[]; nodes: LayoutNode[]; nodesById: Map<string, LayoutNode> } {
-  if (!graph) return { edges: [], nodes: [], nodesById: new Map() };
-
-  const visible = graph.nodes.filter((node) => activeTypes[node.data.type] && activeOrigins[node.data.origin]);
-  const root = visible.find((node) => node.data.id === graph.rootId);
-  const rest = visible.filter((node) => node.data.id !== graph.rootId);
-  const center = { x: 500, y: 325 };
-  const radius = 215;
-  const nodes: LayoutNode[] = [];
-
-  if (root) {
-    nodes.push({
-      id: root.data.id,
-      label: root.data.label,
-      type: root.data.type,
-      x: center.x,
-      y: center.y,
-    });
-  }
-
-  rest.forEach((node, index) => {
-    const angle = (Math.PI * 2 * index) / Math.max(1, rest.length);
-    nodes.push({
-      id: node.data.id,
-      label: node.data.label,
-      type: node.data.type,
-      x: center.x + Math.cos(angle) * radius,
-      y: center.y + Math.sin(angle) * radius,
-    });
-  });
-
-  const nodeIds = new Set(nodes.map((node) => node.id));
-  const edges = graph.edges.filter((edge) => nodeIds.has(edge.data.source) && nodeIds.has(edge.data.target));
-  const nodesById = new Map(nodes.map((node) => [node.id, node]));
-  return { edges, nodes, nodesById };
 }
