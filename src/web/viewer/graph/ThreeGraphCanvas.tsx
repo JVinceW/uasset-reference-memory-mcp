@@ -22,9 +22,11 @@ export function ThreeGraphCanvas(props: {
         dpr={[1, 1.7]}
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
-        <color args={["#0b0d10"]} attach="background" />
-        <ambientLight intensity={0.88} />
-        <directionalLight intensity={1.2} position={[160, 220, 260]} />
+        <color args={["#111821"]} attach="background" />
+        <fog attach="fog" args={["#111821", cameraDistance * 1.7, cameraDistance * 4.8]} />
+        <ambientLight intensity={1.22} />
+        <hemisphereLight args={["#d6e8ff", "#202834", 0.72]} />
+        <directionalLight intensity={1.55} position={[160, 220, 260]} />
         <GraphScene
           hoverGuid={props.hoverGuid}
           layout={props.layout}
@@ -109,7 +111,7 @@ function NodeInstances(props: {
       ref={meshRef}
     >
       <sphereGeometry args={[1, 14, 10]} />
-      <meshStandardMaterial roughness={0.62} vertexColors />
+      <meshStandardMaterial emissive="#111827" emissiveIntensity={0.18} metalness={0.06} roughness={0.44} vertexColors />
     </instancedMesh>
   );
 }
@@ -124,7 +126,7 @@ function EdgeSegments(props: { layout: GraphLayout }): JSX.Element | null {
       const source = props.layout.nodesById.get(edge.source);
       const target = props.layout.nodesById.get(edge.target);
       if (!source || !target) continue;
-      const edgeColor = color.set(assetThreeColor(source.type)).multiplyScalar(0.58);
+      const edgeColor = color.set(assetThreeColor(source.type)).multiplyScalar(0.9);
       positions.push(source.x, source.y, source.z, target.x, target.y, target.z);
       colors.push(edgeColor.r, edgeColor.g, edgeColor.b, edgeColor.r, edgeColor.g, edgeColor.b);
     }
@@ -142,7 +144,7 @@ function EdgeSegments(props: { layout: GraphLayout }): JSX.Element | null {
 
   return (
     <lineSegments geometry={geometry}>
-      <lineBasicMaterial transparent opacity={0.36} vertexColors />
+      <lineBasicMaterial transparent opacity={0.62} vertexColors />
     </lineSegments>
   );
 }
@@ -177,8 +179,8 @@ function colorForNode(
   hovered: boolean,
 ): THREE.Color {
   if (selected) return reusableColor.set("#f4f7fb");
-  if (hovered) return reusableColor.set(assetThreeColor(node.type)).lerp(new THREE.Color("#ffffff"), 0.28);
-  return reusableColor.set(assetThreeColor(node.type));
+  if (hovered) return reusableColor.set(assetThreeColor(node.type)).lerp(new THREE.Color("#ffffff"), 0.42);
+  return reusableColor.set(assetThreeColor(node.type)).lerp(new THREE.Color("#ffffff"), 0.12);
 }
 
 function nodeFromInstance(nodes: GraphLayoutNode[], instanceId: number | undefined): GraphLayoutNode | undefined {
