@@ -24,7 +24,7 @@ const VERSION: string | null = (() => {
 const HELP = `unity-asset-reference-mcp-index — Unity asset reference graph CLI
 
 Usage:
-  unity-asset-reference-mcp-index index    [projectRoot] [--force] [--snapshot] [--db <path>] [--unity <ver>]
+  unity-asset-reference-mcp-index index    [projectRoot] [--force] [--snapshot] [--db <path>] [--unity <ver>] [--concurrency <n>]
   unity-asset-reference-mcp-index snapshot    [projectRoot] [--db <path>]              # export a shareable snapshot
   unity-asset-reference-mcp-index restore     [projectRoot] [--db <path>]              # rebuild the live index from a snapshot
   unity-asset-reference-mcp-index export-json [projectRoot] [--db <path>] [--out <p>]  # write a git-diffable graph.json
@@ -130,6 +130,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     dbPath: args.dbPath,
     force: args.force,
     unityVersion: args.unityVersion,
+    concurrency: args.concurrency,
   });
   const ms = Date.now() - started;
 
@@ -142,6 +143,11 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
   for (const w of s.warnings.slice(0, 10)) console.log(`    [${w.kind}] ${w.path}`);
   if (s.warnings.length > 10) console.log(`    ... and ${s.warnings.length - 10} more`);
   console.log(`  db:         ${args.dbPath}  (${ms} ms)`);
+  console.log(
+    `  timings:    scan ${s.timings.scanMs.toFixed(1)} ms, apply ${s.timings.applyMs.toFixed(1)} ms, ` +
+      `extract ${s.timings.extractionMs.toFixed(1)} ms, write ${s.timings.writeMs.toFixed(1)} ms, ` +
+      `total ${s.timings.totalMs.toFixed(1)} ms`,
+  );
 
   if (args.snapshot) {
     const a = await exportSnapshot(args.dbPath, {

@@ -103,6 +103,14 @@ describe("indexProject fresh build", () => {
 
     const summary = await indexProject(root, { dbPath });
     expect(summary.assetCount).toBe(4); // 2 assets + 2 builtin nodes
+    expect(summary.timings).toEqual({
+      scanMs: expect.any(Number),
+      applyMs: expect.any(Number),
+      extractionMs: expect.any(Number),
+      writeMs: expect.any(Number),
+      totalMs: expect.any(Number),
+    });
+    expect(summary.timings.totalMs).toBeGreaterThanOrEqual(summary.timings.scanMs);
 
     const store = GraphStore.open(dbPath);
     expect(store.assetCount()).toBe(4);

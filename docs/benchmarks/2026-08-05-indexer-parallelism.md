@@ -85,8 +85,56 @@ than assumed.
 
 ## Results
 
-No timings have been recorded yet. This section will be updated after phase
-instrumentation and the first baseline run.
+### Initial `slot-4` Attempts
+
+The real project could not produce a valid baseline on 2026-08-05:
+
+- Fresh indexing reached duplicate GUID validation and stopped because
+  `c64ae6b481a74edf981d6f90c26b69c7` is used by both
+  `Assets/Game.Cricket.Lobby/Runtime/Scripts/UI/Common/Toast` and
+  `Packages/com.ygg.game.visualization/Runtime/UI/Scripts/Notification`.
+- A controlled fresh run that filtered `Packages/com.ygg.game.visualization`
+  then stopped while inserting Addressables because
+  `addressable_entries.guid` was duplicated.
+- A warm incremental run against a copy of the existing index, filtering the
+  two duplicate asset paths, stopped on the same Addressables uniqueness
+  constraint while replacing affected groups.
+
+The failed attempts took approximately 312 seconds for the first fresh run,
+64 seconds for the filtered fresh run, and 13 seconds for the filtered warm
+incremental run. These are failure durations, not usable indexing timings, and
+must not be used for performance comparisons.
+
+The project database was never used as the output path. Temporary benchmark
+copies were created under:
+
+`C:\Users\vince\AppData\Local\Temp\uasset-reference-mcp-indexer-bench`
+
+Valid baseline timings will be recorded after the fixture benchmark is added or
+the duplicate project data is resolved.
+
+### Controlled Fixture Pass
+
+The repository benchmark script generated 2,000 Unity-shaped YAML prefab
+assets, each with a `.meta`, and 1,998 valid reference edges. It ran three
+measured passes at each concurrency level after the fixture was created. The
+first pass included a colder filesystem cache; the table reports medians across
+all three passes.
+
+| Concurrency | Scan median | Apply median | Extract median | Write median | Total median | Nodes | Edges | Unresolved |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 829.0 ms | 250.8 ms | 235.2 ms | 15.8 ms | 1109.1 ms | 2002 | 1998 | 0 |
+| 4 | 122.7 ms | 81.3 ms | 65.4 ms | 15.9 ms | 221.8 ms | 2002 | 1998 | 0 |
+| 8 | 76.1 ms | 65.2 ms | 49.9 ms | 15.4 ms | 158.2 ms | 2002 | 1998 | 0 |
+
+The controlled fixture shows approximately 5x lower total time at concurrency
+4 and 7x lower total time at concurrency 8 versus concurrency 1. This is a
+fixture result, not a prediction for `slot-4`. SQLite write time remains nearly
+flat, supporting the decision to keep database writes serialized.
+
+Command:
+
+`npm run benchmark:indexer`
 
 ## Validation Commands
 

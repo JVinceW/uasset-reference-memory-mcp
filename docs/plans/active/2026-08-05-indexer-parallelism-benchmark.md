@@ -101,11 +101,11 @@ results from warm results when that distinction can be controlled.
 
 - [x] Create isolated worktree from `work/release-0.3.3`.
 - [x] Record the current serial pipeline and benchmark fields.
-- [ ] Add baseline phase instrumentation.
-- [ ] Capture baseline runs.
-- [ ] Parallelize YAML extraction with bounded concurrency.
-- [ ] Parallelize safe filesystem scan work.
-- [ ] Add parity and concurrency tests.
+- [x] Add baseline phase instrumentation.
+- [x] Capture a controlled fixture baseline and record `slot-4` blockers.
+- [x] Parallelize YAML extraction with bounded concurrency.
+- [x] Parallelize safe filesystem scan work.
+- [x] Add parity and concurrency tests.
 - [ ] Re-run benchmarks and document the result.
 - [ ] Run typecheck, full tests, build, and final worktree review.
 
