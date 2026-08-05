@@ -276,6 +276,7 @@ npm install
 npm test        # vitest
 npm run build   # tsc + copy web assets to dist/
 npm run benchmark:indexer  # controlled 2,000-asset concurrency benchmark
+npm run benchmark:rust-extractor  # compare Node and Rust reference extraction
 ```
 
 This repo uses a Git-native, text-first development workflow (see

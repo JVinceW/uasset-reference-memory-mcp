@@ -44,10 +44,12 @@ In scope:
   contract.
 - Preserve deterministic node, edge, warning, and summary output.
 - Add focused tests and benchmark evidence.
+- Benchmark an isolated Rust reference extractor against the Node implementation
+  without wiring a subprocess into the production indexer.
 
 Out of scope:
 
-- Rewriting the indexer in Rust during this phase.
+- Rewriting or production-integrating the indexer in Rust during this phase.
 - Parallel SQLite writes on the same `GraphStore` connection.
 - Changing the web viewer or graph rendering.
 - Changing the asset graph schema or reference semantics.
@@ -106,8 +108,9 @@ results from warm results when that distinction can be controlled.
 - [x] Parallelize YAML extraction with bounded concurrency.
 - [x] Parallelize safe filesystem scan work.
 - [x] Add parity and concurrency tests.
-- [ ] Re-run benchmarks and document the result.
-- [ ] Run typecheck, full tests, build, and final worktree review.
+- [x] Re-run Node benchmarks and document the result.
+- [x] Implement and benchmark an isolated Rust extractor with output parity.
+- [x] Run typecheck, full tests, build, Rust checks, and final worktree review.
 
 ## Decisions
 
@@ -119,14 +122,21 @@ results from warm results when that distinction can be controlled.
   batching is already an explicit performance boundary.
 - 2026-08-05: Use bounded concurrency and deterministic result merging rather
   than unbounded `Promise.all`.
+- 2026-08-05: Rust is faster for extractor-only compute on the controlled
+  fixture, but a per-run subprocess is much slower end-to-end. Do not integrate
+  Rust into the production indexer without removing process and serialization
+  overhead and measuring a real project.
 
 ## Validation
 
 - Focused proof: benchmark report, output parity checks, concurrency behavior
   tests, and fresh/incremental index fixtures.
 - Repository-required checks: `npm run typecheck`, `npm test`, `npm run build`,
-  and `git diff --check`.
+  `cargo fmt --manifest-path rust/uasset-ref-extractor/Cargo.toml --check`,
+  `cargo test --manifest-path rust/uasset-ref-extractor/Cargo.toml`, and
+  `git diff --check`.
 
 ## Result
 
-Complete after implementation, benchmark comparison, and validation.
+Complete after implementation, benchmark comparison, Rust comparison, and
+validation.

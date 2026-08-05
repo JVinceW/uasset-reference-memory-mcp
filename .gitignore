@@ -21,3 +21,4 @@ spot-*.mjs
 
 # Local Git worktrees used for isolated feature development.
 .worktrees/
+rust/**/target/

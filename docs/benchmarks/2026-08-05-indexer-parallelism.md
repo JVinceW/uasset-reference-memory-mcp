@@ -5,7 +5,8 @@ Date: 2026-08-05
 ## Purpose
 
 Capture the current Node.js indexer baseline and compare it with bounded
-parallel filesystem scanning and YAML reference extraction. This report is the
+parallel filesystem scanning and YAML reference extraction. It also records an
+isolated Rust reference-extraction proof of concept. This report is the
 benchmark record for
 [`2026-08-05-indexer-parallelism-benchmark.md`](../plans/active/2026-08-05-indexer-parallelism-benchmark.md).
 
@@ -37,7 +38,8 @@ Relevant implementation points:
 
 Use bounded concurrency for independent filesystem and YAML parsing work.
 Keep SQLite mutation serialized and merge task results in deterministic path
-order. Do not introduce a Rust implementation during this benchmark phase.
+order. The Rust comparison is limited to an isolated extractor sidecar; a
+production Rust rewrite or integration remains a separate decision.
 
 ## Environment
 
@@ -46,12 +48,13 @@ order. Do not introduce a Rust implementation during this benchmark phase.
 | Branch | `work/indexer-parallelism` |
 | Base | `work/release-0.3.3` at `92cfa02` |
 | Worktree | `E:\common-workspace\uasset-reference-memory-mcp\.worktrees\indexer-parallelism` |
-| OS | To record |
-| Node | To record |
-| CPU | To record |
-| Storage | To record |
-| Unity running | To record |
-| Fixture project | To record |
+| OS | Windows, PowerShell |
+| Node | `v24.18.0` |
+| Rust | `rustc 1.94.1` |
+| CPU | 12th Gen Intel Core i7-12700K |
+| Storage | E: NTFS; media type not recorded |
+| Unity running | Not applicable to controlled fixture |
+| Fixture project | Temporary 2,000-asset Unity-shaped fixture |
 
 ## Measurement Contract
 
@@ -136,11 +139,43 @@ Command:
 
 `npm run benchmark:indexer`
 
+### Isolated Rust Extractor Pass
+
+The Rust proof of concept in `rust/uasset-ref-extractor` mirrors the current
+Node reference-extraction output and was benchmarked against the same 2,000
+prefab records. Every mode produced 2,000 outputs, 1,998 edges, zero unresolved
+references, and exact output parity with the warm-up result.
+
+The end-to-end column includes starting a new Rust process, reading the target
+map, serializing the input to NDJSON, and parsing the NDJSON output. The inner
+column is measured around only the Rayon extraction phase inside that process.
+
+| Mode | End-to-end median | Extractor-only median | Min/max end-to-end | Min/max extractor-only |
+| --- | ---: | ---: | ---: | ---: |
+| Node, 1 worker | 3.879 ms | 3.879 ms | 3.021 / 4.064 ms | 3.021 / 4.064 ms |
+| Node, 8 workers | 3.146 ms | 3.146 ms | 2.469 / 3.518 ms | 2.469 / 3.518 ms |
+| Rust, 1 thread | 125.470 ms | 2.297 ms | 125.271 / 125.883 ms | 2.264 / 2.358 ms |
+| Rust, 8 threads | 119.852 ms | 1.074 ms | 119.277 / 125.147 ms | 0.965 / 1.310 ms |
+
+Conclusion: Rust is faster for the isolated parser computation, but a new
+Rust subprocess is substantially slower for this batch because process and
+JSON/pipe overhead dominate. Rust should not replace the current Node path as
+a subprocess for small incremental batches. A production Rust path would need
+an in-process N-API binding or a long-lived worker with a binary/batched
+protocol, plus larger real-project measurements before adoption.
+
+Command:
+
+`npm run benchmark:rust-extractor`
+
 ## Validation Commands
 
 ```text
 npm run typecheck
 npm test
 npm run build
+npm run benchmark:rust-extractor
+cargo fmt --manifest-path rust/uasset-ref-extractor/Cargo.toml --check
+cargo test --manifest-path rust/uasset-ref-extractor/Cargo.toml
 git diff --check
 ```
