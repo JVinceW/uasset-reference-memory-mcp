@@ -1,6 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { classifyAssetType, isYamlAsset } from "./asset-type.js";
+import { AsyncLimiter, DEFAULT_INDEX_CONCURRENCY, mapWithConcurrency, normalizeConcurrency } from "../util/async.js";
 import { parseGuid, parseImporterType } from "./meta-parse.js";
 import { discoverScanRoots } from "./package-sources.js";
 import { matchesAnyGlob } from "../config/glob.js";
@@ -57,16 +58,22 @@ const DEFAULT_IGNORE: IgnorePredicate = (name, relPath) => isUnityIgnored(name, 
 export async function scanProject(
   projectRoot: string,
   ignore: IgnorePredicate = DEFAULT_IGNORE,
+  concurrency = DEFAULT_INDEX_CONCURRENCY,
 ): Promise<ScanResult> {
+  const normalizedConcurrency = normalizeConcurrency(concurrency);
   const nodes: AssetNode[] = [];
   const discovery = await discoverScanRoots(projectRoot);
   const warnings = [...discovery.warnings];
+  const ioLimiter = new AsyncLimiter(normalizedConcurrency);
 
-  for (const root of discovery.roots) {
+  await mapWithConcurrency(discovery.roots, normalizedConcurrency, async (root) => {
     const rootName = root.virtualRoot.slice(root.virtualRoot.lastIndexOf("/") + 1);
-    if (ignore(rootName, root.virtualRoot)) continue;
-    await walk(root, "", nodes, warnings, ignore);
-  }
+    if (ignore(rootName, root.virtualRoot)) return;
+    await walk(root, "", nodes, warnings, ignore, ioLimiter, normalizedConcurrency);
+  });
+
+  nodes.sort((a, b) => a.path.localeCompare(b.path));
+  warnings.sort((a, b) => a.path.localeCompare(b.path) || a.kind.localeCompare(b.kind) || a.message.localeCompare(b.message));
 
   return {
     nodes,
@@ -81,6 +88,8 @@ async function walk(
   nodes: AssetNode[],
   warnings: ScanWarning[],
   ignore: IgnorePredicate,
+  ioLimiter: AsyncLimiter,
+  concurrency: number,
 ): Promise<void> {
   const sourceDirectory = relativeDir
     ? join(root.physicalRoot, relativeDir)
@@ -88,13 +97,13 @@ async function walk(
   const virtualDirectory = relativeDir
     ? `${root.virtualRoot}/${relativeDir.replaceAll("\\", "/")}`
     : root.virtualRoot;
-  const entries = await readdir(sourceDirectory, { withFileTypes: true });
+  const entries = await ioLimiter.run(() => readdir(sourceDirectory, { withFileTypes: true }));
   const names = new Set(entries.map((e) => e.name));
 
-  for (const entry of entries) {
+  await mapWithConcurrency(entries, concurrency, async (entry) => {
     const relativePath = relativeDir ? `${relativeDir}/${entry.name}` : entry.name;
     const virtualPath = `${virtualDirectory}/${entry.name.replaceAll("\\", "/")}`;
-    if (ignore(entry.name, virtualPath)) continue;
+    if (ignore(entry.name, virtualPath)) return;
 
     if (entry.name.endsWith(META_SUFFIX)) {
       const assetName = entry.name.slice(0, -META_SUFFIX.length);
@@ -105,7 +114,7 @@ async function walk(
           message: `.meta has no matching asset: ${virtualPath.slice(0, -META_SUFFIX.length)}`,
         });
       }
-      continue;
+      return;
     }
 
     // A non-meta entry is an asset; it must have a sibling `<name>.meta`.
@@ -116,14 +125,14 @@ async function walk(
         message: `asset has no .meta: ${virtualPath}`,
       });
     } else {
-      const node = await buildNode(root, relativePath, entry.isDirectory(), warnings);
+      const node = await ioLimiter.run(() => buildNode(root, relativePath, entry.isDirectory(), warnings));
       if (node) nodes.push(node);
     }
 
     if (entry.isDirectory()) {
-      await walk(root, relativePath, nodes, warnings, ignore);
+      await walk(root, relativePath, nodes, warnings, ignore, ioLimiter, concurrency);
     }
-  }
+  });
 }
 
 async function buildNode(

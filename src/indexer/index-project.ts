@@ -1,5 +1,6 @@
 import { copyFile, readFile, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { performance } from "node:perf_hooks";
 import { GraphStore } from "../store/graph-store.js";
 import { scanProject, buildIgnore } from "./meta-scanner.js";
 import { loadConfig, configPathFor } from "../config/project-config.js";
@@ -14,11 +15,13 @@ import {
 } from "./addressables.js";
 import { SCHEMA_VERSION } from "../store/schema.js";
 import type { AssetNode, AssetType, Edge, ScanResult, ScanWarning, UnresolvedRef } from "./types.js";
+import { normalizeConcurrency, mapWithConcurrency } from "../util/async.js";
 
 export interface IndexOptions {
   dbPath: string;
   force?: boolean;
   unityVersion?: string;
+  concurrency?: number;
   scan?: (projectRoot: string, ignore?: (name: string, relPath: string) => boolean) => Promise<ScanResult>;
 }
 
@@ -31,6 +34,15 @@ export interface IndexSummary {
   updated: number;
   removed: number;
   unchanged: number;
+  timings: IndexTimings;
+}
+
+export interface IndexTimings {
+  scanMs: number;
+  applyMs: number;
+  extractionMs: number;
+  writeMs: number;
+  totalMs: number;
 }
 
 /** Thrown when the whole project is set to ForceBinary asset serialization. */
@@ -55,7 +67,9 @@ export async function indexProject(
   projectRoot: string,
   opts: IndexOptions,
 ): Promise<IndexSummary> {
-  const scan = opts.scan ?? scanProject;
+  const startedAt = performance.now();
+  const concurrency = normalizeConcurrency(opts.concurrency);
+  const scan = opts.scan ?? ((root, ignore) => scanProject(root, ignore, concurrency));
   const { dbPath } = opts;
   const tempPath = `${dbPath}.building-${process.pid}`;
 
@@ -75,7 +89,9 @@ export async function indexProject(
       throw new BinarySerializationError();
     }
     const config = loadConfig(configPathFor(dbPath));
+    const scanStartedAt = performance.now();
     const result = await scan(projectRoot, buildIgnore(config.scan));
+    const scanMs = performance.now() - scanStartedAt;
     assertUniqueAssetGuids(result.nodes, BUILTIN_NODES);
     if (
       incremental &&
@@ -92,11 +108,16 @@ export async function indexProject(
     // but excluded from the user-facing change counts.
     const resolve = buildResolver([...BUILTIN_NODES, ...result.nodes]);
     const warnings = [...result.warnings];
+    const timings = { extractionMs: 0, writeMs: 0 };
+    const builtinWriteStartedAt = performance.now();
     store.upsertNodes([...BUILTIN_NODES]);
+    timings.writeMs += performance.now() - builtinWriteStartedAt;
 
+    const applyStartedAt = performance.now();
     const counts = incremental
-      ? await applyIncremental(store, projectRoot, result.nodes, resolve, warnings)
-      : await applyFresh(store, projectRoot, result.nodes, resolve, warnings);
+      ? await applyIncremental(store, projectRoot, result.nodes, resolve, warnings, timings, concurrency)
+      : await applyFresh(store, projectRoot, result.nodes, resolve, warnings, timings, concurrency);
+    const applyMs = performance.now() - applyStartedAt;
 
     store.setMeta("schema_version", String(SCHEMA_VERSION));
     store.setMeta("project_root", projectRoot);
@@ -115,6 +136,13 @@ export async function indexProject(
       unresolvedCount: store.unresolvedCount(),
       warnings,
       ...counts,
+      timings: {
+        scanMs,
+        applyMs,
+        extractionMs: timings.extractionMs,
+        writeMs: timings.writeMs,
+        totalMs: performance.now() - startedAt,
+      },
     };
 
     store.db.pragma("wal_checkpoint(TRUNCATE)");
@@ -136,17 +164,26 @@ async function applyFresh(
   nodes: AssetNode[],
   resolve: Resolver,
   warnings: ScanWarning[],
+  timings: Pick<IndexTimings, "extractionMs" | "writeMs">,
+  concurrency: number,
 ): Promise<ChangeCounts> {
+  const nodeWriteStartedAt = performance.now();
   store.upsertNodes(nodes);
+  timings.writeMs += performance.now() - nodeWriteStartedAt;
+  const extractionStartedAt = performance.now();
   const { edges, unresolved, addressableGroups } = await extractAll(
     projectRoot,
     nodes,
     resolve,
     warnings,
+    concurrency,
   );
+  timings.extractionMs += performance.now() - extractionStartedAt;
+  const edgeWriteStartedAt = performance.now();
   store.insertEdges(edges);
   store.insertUnresolved(unresolved);
   store.replaceAddressableGroups(addressableGroups);
+  timings.writeMs += performance.now() - edgeWriteStartedAt;
   return { added: nodes.length, updated: 0, removed: 0, unchanged: 0 };
 }
 
@@ -156,6 +193,8 @@ async function applyIncremental(
   nodes: AssetNode[],
   resolve: Resolver,
   warnings: ScanWarning[],
+  timings: Pick<IndexTimings, "extractionMs" | "writeMs">,
+  concurrency: number,
 ): Promise<ChangeCounts> {
   const priorByPath = store.getNodeMtimes();
   const priorByGuid = new Map<string, { path: string; mtime: number }>();
@@ -206,10 +245,12 @@ async function applyIncremental(
     .filter((node): node is AssetNode => node !== undefined);
 
   // Nodes: upsert changed, then handle removals (demote inbound, drop node).
+  const nodeWriteStartedAt = performance.now();
   store.upsertNodes([...addedNodes, ...updatedNodes]);
   for (const guid of removedGuids) store.demoteIncomingToUnresolved(guid);
   store.deleteOutgoing(removedGuids);
   store.deleteNodesByGuid(removedGuids);
+  timings.writeMs += performance.now() - nodeWriteStartedAt;
 
   // Edges: re-extract changed files and unchanged sources whose target type or
   // resolution changed. Re-reading the source preserves full edge fidelity.
@@ -217,19 +258,26 @@ async function applyIncremental(
     [...addedNodes, ...updatedNodes, ...affectedSourceNodes].map((node) => [node.guid, node]),
   );
   const changed = [...changedByGuid.values()];
+  const changedEdgeCleanupStartedAt = performance.now();
   store.deleteOutgoing(changed.map((node) => node.guid));
+  timings.writeMs += performance.now() - changedEdgeCleanupStartedAt;
+  const extractionStartedAt = performance.now();
   const { edges, unresolved, addressableGroups } = await extractAll(
     projectRoot,
     changed,
     resolve,
     warnings,
+    concurrency,
   );
+  timings.extractionMs += performance.now() - extractionStartedAt;
+  const edgeWriteStartedAt = performance.now();
   store.insertEdges(edges);
   store.insertUnresolved(unresolved);
   store.replaceAddressableGroupsForAssets(
     [...changed.map((node) => node.guid), ...removedGuids],
     addressableGroups,
   );
+  timings.writeMs += performance.now() - edgeWriteStartedAt;
 
   return {
     added: addedNodes.length,
@@ -244,55 +292,69 @@ async function extractAll(
   nodes: AssetNode[],
   resolve: Resolver,
   warnings: ScanWarning[],
+  concurrency: number,
 ): Promise<{
   edges: Edge[];
   unresolved: UnresolvedRef[];
   addressableGroups: AddressableGroup[];
 }> {
-  const edges: Edge[] = [];
-  const unresolved: UnresolvedRef[] = [];
-  const addressableGroups: AddressableGroup[] = [];
+  const results = await mapWithConcurrency(nodes, concurrency, async (node) => {
+    const result: {
+      edges: Edge[];
+      unresolved: UnresolvedRef[];
+      addressableGroups: AddressableGroup[];
+      warnings: ScanWarning[];
+    } = { edges: [], unresolved: [], addressableGroups: [], warnings: [] };
+    if (node.isBinary) return result; // folders and non-YAML assets
 
-  for (const node of nodes) {
-    if (node.isBinary) continue; // folders and non-YAML assets
     let content: string;
     const sourcePath = node.sourcePath ?? join(projectRoot, node.path);
     try {
       content = await readFile(sourcePath, "utf8");
     } catch {
-      warnings.push({
+      result.warnings.push({
         kind: "unreadable-asset",
         path: node.path,
         message: `could not read asset for reference extraction: ${node.path}`,
       });
-      continue;
+      return result;
     }
 
     const res = extractReferences(content, node.guid, resolve);
     if (res.binarySerialized) {
       // Incidental always-binary asset (e.g. LightingData.asset) in a text
       // project — skip its edges rather than aborting the whole index.
-      warnings.push({
+      result.warnings.push({
         kind: "binary-serialized",
         path: node.path,
         message: `asset is binary-serialized; skipped reference extraction: ${node.path}`,
       });
-      continue;
+      return result;
     }
-    edges.push(...res.edges);
-    unresolved.push(...res.unresolved);
+    result.edges.push(...res.edges);
+    result.unresolved.push(...res.unresolved);
     try {
       const group = extractAddressableGroup(content, { assetGuid: node.guid, path: node.path });
-      if (group) addressableGroups.push(group);
+      if (group) result.addressableGroups.push(group);
     } catch (error) {
       if (error instanceof AddressableParseError) {
-        warnings.push({ kind: "unreadable-asset", path: node.path, message: error.message });
+        result.warnings.push({ kind: "unreadable-asset", path: node.path, message: error.message });
       } else {
         throw error;
       }
     }
-  }
+    return result;
+  });
 
+  const edges: Edge[] = [];
+  const unresolved: UnresolvedRef[] = [];
+  const addressableGroups: AddressableGroup[] = [];
+  for (const result of results) {
+    edges.push(...result.edges);
+    unresolved.push(...result.unresolved);
+    addressableGroups.push(...result.addressableGroups);
+    warnings.push(...result.warnings);
+  }
   return { edges, unresolved, addressableGroups };
 }
 

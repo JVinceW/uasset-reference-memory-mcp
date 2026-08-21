@@ -14,6 +14,7 @@ export interface CliArgs {
   /** Unity Editor dependency export required by `verify-index`. */
   verifyJsonPath?: string;
   unityVersion?: string;
+  concurrency?: number;
 }
 
 const COMMANDS = new Set(["index", "snapshot", "restore", "export-json", "verify-index"]);
@@ -33,6 +34,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
   let out: string | undefined;
   let verifyJsonPath: string | undefined;
   let unityVersion: string | undefined;
+  let concurrency: number | undefined;
   let root: string | undefined;
 
   for (let i = 1; i < argv.length; i++) {
@@ -43,6 +45,10 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
     else if (arg === "--out") out = argv[++i];
     else if (arg === "--verify") verifyJsonPath = argv[++i];
     else if (arg === "--unity") unityVersion = argv[++i];
+    else if (arg === "--concurrency") {
+      const value = Number(argv[++i]);
+      if (Number.isFinite(value)) concurrency = value;
+    }
     else if (!arg.startsWith("--")) root = arg;
   }
 
@@ -56,5 +62,6 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
     out,
     verifyJsonPath,
     unityVersion,
+    concurrency,
   };
 }

@@ -39,6 +39,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
+    "benchmark:indexer": "node scripts/benchmark-indexer.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.viewer.json --noEmit",
     "build:viewer": "vite build --config vite.viewer.config.ts",
     "build": "tsc -p tsconfig.build.json && node scripts/copy-public.mjs && npm run build:viewer",

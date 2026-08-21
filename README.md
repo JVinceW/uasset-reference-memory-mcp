@@ -74,6 +74,15 @@ Builds `<project>/.asset-memory/index.db`.
 unity-asset-reference-mcp-index index /path/to/UnityProject --force
 ```
 
+Indexing uses bounded concurrency for filesystem scanning and YAML reference
+extraction. The default is capped at eight workers; adjust it for a benchmark
+or storage device with `--concurrency <n>`. SQLite graph writes remain
+transactional and serialized:
+
+```bash
+unity-asset-reference-mcp-index index /path/to/UnityProject --concurrency 4
+```
+
 Add this to your **Unity project's** `.gitignore` — ignore the live index, but
 commit the config and (optional) shared snapshot:
 
@@ -266,6 +275,7 @@ not migrated in place.
 npm install
 npm test        # vitest
 npm run build   # tsc + copy web assets to dist/
+npm run benchmark:indexer  # controlled 2,000-asset concurrency benchmark
 ```
 
 This repo uses a Git-native, text-first development workflow (see

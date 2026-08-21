@@ -18,10 +18,11 @@ describe("parseArgs", () => {
   });
 
   test("honors --force and --db and --unity in any order", () => {
-    const a = parseArgs(["index", "--force", "--db", "/x/y.db", "--unity", "2022.3", "/proj"]);
+    const a = parseArgs(["index", "--force", "--db", "/x/y.db", "--unity", "2022.3", "--concurrency", "4", "/proj"]);
     expect(a.force).toBe(true);
     expect(a.dbPath).toBe("/x/y.db");
     expect(a.unityVersion).toBe("2022.3");
+    expect(a.concurrency).toBe(4);
     expect(a.projectRoot).toBe("/proj");
   });
 
