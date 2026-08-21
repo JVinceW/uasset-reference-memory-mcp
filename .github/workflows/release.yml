@@ -34,9 +34,18 @@ jobs:
         run: |
           NAME=$(node -p "require('./package.json').name")
           VERSION=$(node -p "require('./package.json').version")
+          # A SemVer prerelease carries a hyphenated identifier (0.4.0-rc.1).
+          # Those publish under `next` so `latest` — what a bare `npm install`
+          # and scripts/install.sh resolve to — keeps pointing at the current
+          # stable release. Promote a soaked prerelease with:
+          #   npm dist-tag add "$NAME@$VERSION" latest
+          case "$VERSION" in
+            *-*) TAG=next ;;
+            *)   TAG=latest ;;
+          esac
           if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
             echo "::notice::$NAME@$VERSION already on npm — skipping publish."
           else
-            echo "Publishing $NAME@$VERSION"
-            npm publish --access public --provenance
+            echo "Publishing $NAME@$VERSION under dist-tag $TAG"
+            npm publish --access public --provenance --tag "$TAG"
           fi
