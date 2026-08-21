@@ -1,3 +1,7 @@
+// These weight-level entrypoints carry a unicode-range per subset, which the
+// per-subset files (latin-400.css) omit. vite.viewer.config.ts prunes them down
+// to the latin subsets and drops the woff fallback; importing the pruned
+// subsets directly would lose unicode-range and let latin-ext shadow latin.
 import "@fontsource/ibm-plex-sans/400.css";
 import "@fontsource/ibm-plex-sans/600.css";
 import "@fontsource/ibm-plex-mono/400.css";
