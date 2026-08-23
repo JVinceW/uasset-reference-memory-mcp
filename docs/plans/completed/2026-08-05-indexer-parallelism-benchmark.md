@@ -4,7 +4,7 @@ Date: 2026-08-05
 
 ## Status
 
-Active
+Completed
 
 ## Outcome
 
@@ -106,8 +106,8 @@ results from warm results when that distinction can be controlled.
 - [x] Parallelize YAML extraction with bounded concurrency.
 - [x] Parallelize safe filesystem scan work.
 - [x] Add parity and concurrency tests.
-- [ ] Re-run benchmarks and document the result.
-- [ ] Run typecheck, full tests, build, and final worktree review.
+- [x] Re-run benchmarks and document the result.
+- [x] Run typecheck, full tests, build, and final worktree review.
 
 ## Decisions
 

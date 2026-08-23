@@ -6,6 +6,29 @@ Date: 2026-08-02
 
 Active
 
+### Checkbox reconciliation, 2026-08-23
+
+Much of this plan shipped in 0.4.0 while its boxes stayed unticked, so the plan
+read as barely started when it was roughly half done. Every item was re-checked
+against the code and 22 were ticked on evidence: the five new API routes and
+their tests, `tokens.css`, self-hosted IBM Plex, the 248px/320px/36px shell,
+Lucide icons, the 50-5000 node budget, selection history, asset detail fields,
+copy actions, trace direction, the 120ms search palette, and name/path/GUID
+search.
+
+What remains open is genuinely unbuilt, not merely unticked:
+
+- **Phase 4** — the Sigma/graphology 2D workbench. The shipped 2D and DAG modes
+  are hand-drawn inline SVG; `sigma`, `graphology`, and
+  `graphology-layout-forceatlas2` are installed for this phase but not yet
+  imported anywhere.
+- **Phase 7** — the query drawer. No CodeMirror, no TanStack Virtual rows, no
+  CSV export.
+- **Phase 8** — browser validation. No Playwright, no screenshots, no
+  canvas-pixel checks. This is the release's largest untested surface.
+- Loading and error states, the inspector's tab split, `collapse folders`, and
+  camera panning on selection.
+
 ## Outcome
 
 Replace the current basic Cytoscape web viewer with a high-fidelity local asset
@@ -300,7 +323,7 @@ Responsibilities:
 
 - [x] Phase 0: Verify current readiness and lock implementation decisions.
 - [x] Phase 1: Add the frontend build harness without changing behavior.
-- [ ] Phase 2: Extend and test the shared web API contract.
+- [x] Phase 2: Extend and test the shared web API contract.
 - [ ] Phase 3: Implement design tokens, shell, and loading states.
 - [ ] Phase 4: Implement the real 2D graph workbench.
 - [ ] Phase 5: Implement selection, inspector, and reference-site details.
@@ -343,33 +366,33 @@ Responsibilities:
 
 ### Phase 2: Extend The Shared Web API Contract
 
-- [ ] Add API types for assets, edges, overview, search results, subgraphs,
+- [x] Add API types for assets, edges, overview, search results, subgraphs,
   traces, unused assets, and index status.
-- [ ] Extend `/api/overview` or add `/api/index-status` so the UI can render
+- [x] Extend `/api/overview` or add `/api/index-status` so the UI can render
   project root, schema version, indexed time, asset count, edge count,
   unresolved count, and package metadata where available.
-- [ ] Add a graph-data endpoint for the initial node budget:
+- [x] Add a graph-data endpoint for the initial node budget:
   filters by types, origins, path prefix, hide-builtin, and node budget ranked
   by degree.
-- [ ] Add an asset-detail endpoint that returns the resolved asset plus inbound
+- [x] Add an asset-detail endpoint that returns the resolved asset plus inbound
   and outbound edge rows, preserving `ref_kind`, `context`, `file_id`, and
   `count`.
-- [ ] Add root trace endpoints for inbound and outbound traversal. Do not
+- [x] Add root trace endpoints for inbound and outbound traversal. Do not
   replace the existing shortest-path `trace_path(from, to)` behavior unless
   product docs are updated.
-- [ ] Keep every route backed by `QueryDb` so both better-sqlite3 and sql.js can
+- [x] Keep every route backed by `QueryDb` so both better-sqlite3 and sql.js can
   execute it.
-- [ ] Extend `src/web/api.test.ts` and `src/web/wasm-parity.test.ts` for each
+- [x] Extend `src/web/api.test.ts` and `src/web/wasm-parity.test.ts` for each
   new route.
 
 ### Phase 3: Implement Tokens, Shell, And Loading States
 
-- [ ] Add `tokens.css` with dark, light, and system theme variables matching the
+- [x] Add `tokens.css` with dark, light, and system theme variables matching the
   handoff values.
-- [ ] Self-host IBM Plex Sans and IBM Plex Mono through `@fontsource`.
-- [ ] Build the full-bleed workbench shell:
+- [x] Self-host IBM Plex Sans and IBM Plex Mono through `@fontsource`.
+- [x] Build the full-bleed workbench shell:
   top bar, 248px sidebar, flexible canvas, 320px inspector, and 36px query bar.
-- [ ] Use Lucide icons for actions and controls instead of prototype glyphs.
+- [x] Use Lucide icons for actions and controls instead of prototype glyphs.
 - [ ] Implement no-index, indexing, broken-reference, and query-error states.
 - [ ] Ensure the old graph remains visible while a reindex request is running or
   fails.
@@ -388,7 +411,7 @@ Responsibilities:
 - [ ] Run ForceAtlas2 in a worker until settled, then stop.
 - [ ] Persist positions per project/index fingerprint if the implementation can
   do so without adding a backend.
-- [ ] Implement node budget from 50 to 5000, ranked by degree.
+- [x] Implement node budget from 50 to 5000, ranked by degree.
 - [ ] Implement type toggles, origin filters, `hide builtin`, and `collapse
   folders`. Folder aggregation can be simplified in the first pass only if the
   UI labels the behavior honestly.
@@ -398,13 +421,13 @@ Responsibilities:
 ### Phase 5: Implement Selection And Inspector
 
 - [ ] Click node to select and pan the camera to center it without relayout.
-- [ ] Add selection history with back and forward navigation.
-- [ ] Render asset detail: type, name, path, GUID, origin, size, in/out counts,
+- [x] Add selection history with back and forward navigation.
+- [x] Render asset detail: type, name, path, GUID, origin, size, in/out counts,
   and modified time.
 - [ ] Render `Referenced by`, `Depends on`, and `Source` tabs.
 - [ ] Show reference rows with asset name, path, `ref_kind`, `context`,
   `file_id`, and count.
-- [ ] Add copy GUID and copy path actions.
+- [x] Add copy GUID and copy path actions.
 - [ ] Keep `Reveal in Unity` disabled or hidden until an approved integration
   exists.
 - [ ] Add a source snippet only if the API can return real local YAML context;
@@ -413,13 +436,13 @@ Responsibilities:
 
 ### Phase 6: Implement Trace Mode And Search
 
-- [ ] Add inbound and outbound trace mode from a selected root with default
+- [x] Add inbound and outbound trace mode from a selected root with default
   depth 5 and a node cap.
 - [ ] Dim off-path nodes and edges through Sigma reducers; do not remove them.
 - [ ] Keep graph positions unchanged while entering or exiting trace mode.
 - [ ] Render blast-radius counts by hop and asset type.
-- [ ] Implement command/search palette with 120ms debounce.
-- [ ] Search by name, path, and GUID prefix, grouped by asset type.
+- [x] Implement command/search palette with 120ms debounce.
+- [x] Search by name, path, and GUID prefix, grouped by asset type.
 - [ ] Support keyboard actions for focus, trace upstream, isolate closure, and
   escape close.
 - [ ] Add focused tests for trace state and search result normalization.
@@ -446,15 +469,15 @@ Responsibilities:
 - [ ] Validate sidebar collapse or rail behavior below 900px.
 - [ ] Check that the canvas remains at least 560px wide.
 - [ ] Run canvas-pixel checks so graph renders are nonblank.
-- [ ] Run `npm run typecheck`, `npm test`, and `npm run build`.
+- [x] Run `npm run typecheck`, `npm test`, and `npm run build`.
 
 ### Phase 9: Docs, Package Proof, And Plan Completion
 
-- [ ] Update README web-viewer instructions if commands or static file paths
+- [x] Update README web-viewer instructions if commands or static file paths
   change.
 - [ ] Update product docs if new API behavior, query policy, or reindex behavior
   becomes externally observable.
-- [ ] Run `npm pack --dry-run` and confirm the expected web assets are included.
+- [x] Run `npm pack --dry-run` and confirm the expected web assets are included.
 - [ ] Record validation results in this plan.
 - [ ] Move this plan to `docs/plans/completed/` only after the implementation is
   validated.

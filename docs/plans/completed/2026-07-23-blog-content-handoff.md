@@ -24,7 +24,13 @@ Date: 2026-07-23
 
 ## Status
 
-Active
+Superseded
+
+Never started: its target `docs/content/` was never created and none of its 18
+steps were taken. The need it described — a repeatable handoff for writing about
+a release — is met instead by the briefs under `docs/releases/`, which follow
+the v0.3.1 pattern and were used again for the v0.4.0 series. Reopen this only
+if a general `docs/content/` system is wanted beyond per-release briefs.
 
 ## Outcome
 
