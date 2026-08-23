@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -45,9 +46,23 @@ const TOOLS: ToolDef[] = [
   { name: "manage_adr", description: "Manage Architecture Decision Records (markdown under .asset-memory/adrs/).", schema: { action: z.enum(["create", "list", "get", "update"]), id: z.number().optional(), title: z.string().optional(), status: z.string().optional(), context: z.string().optional(), decision: z.string().optional(), consequences: z.string().optional() } },
 ];
 
+/**
+ * The version reported to MCP clients, read from the package rather than
+ * hardcoded — it had drifted to 0.1.0 and every client inspector showed that.
+ * Resolves to the package root from both `src/mcp/` and `dist/mcp/`.
+ */
+function packageVersion(): string {
+  try {
+    const raw = readFileSync(new URL("../../package.json", import.meta.url), "utf8");
+    return (JSON.parse(raw) as { version?: string }).version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
 /** Build an MCP server exposing the asset-graph tools over the given context. */
 export function createMcpServer(ctx: ToolCtx): McpServer {
-  const server = new McpServer({ name: "asset-reference-mcp", version: "0.1.0" });
+  const server = new McpServer({ name: "asset-reference-mcp", version: packageVersion() });
   for (const t of TOOLS) {
     server.registerTool(
       t.name,
