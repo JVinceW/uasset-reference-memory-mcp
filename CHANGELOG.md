@@ -27,7 +27,8 @@ so the same query returns more results than in 0.3.2.
 ### Added
 
 - **Interactive web viewer.** A new graph viewer served at `/`, rendering the
-  dependency graph in **2D** (Sigma) or **3D** (three.js). Includes an
+  dependency graph in three modes: **2D**, **DAG**, and **3D**. 2D and DAG are
+  drawn as inline SVG; 3D uses three.js and loads on demand. Includes an
   attention panel for broken references, unused assets, and the most-referenced
   assets; filters by asset type and origin; dependency/reference tracing; a node
   budget for large graphs; search; back/forward navigation; and light/dark
