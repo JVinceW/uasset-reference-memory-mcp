@@ -63,7 +63,7 @@ name the package with `-p`:
 ```bash
 npx -y unity-asset-reference-mcp --project /path/to/UnityProject          # MCP server
 npx -y -p unity-asset-reference-mcp unity-asset-reference-mcp-index index /path   # indexer
-npx -y -p unity-asset-reference-mcp unity-asset-reference-mcp-web --db <index.db> # viewer
+npx -y -p unity-asset-reference-mcp unity-asset-reference-mcp-web --project /path # viewer
 ```
 
 ## 1. Index a project
@@ -184,12 +184,17 @@ batch of asset/`.meta` changes. Use `force: true` only when guaranteed freshness
 is required. `index_status` reports stored index metadata; it does not scan live
 assets or prove freshness, and query tools never trigger hidden indexing.
 
-## 3. Web viewer
+## 4. Web viewer
 
 ```bash
-unity-asset-reference-mcp-web --db /path/to/UnityProject/.asset-memory/index.db
+unity-asset-reference-mcp-web --project /path/to/UnityProject
 # open http://localhost:7777
 ```
+
+`--project` takes the same argument as the MCP server and the indexer, and
+resolves the index at `<root>/.asset-memory/index.db`. Point at a database
+elsewhere with `--db <index.db>`, and change the port with `--port <n>` — useful
+when serving more than one project at once.
 
 The viewer renders the dependency graph in **2D or 3D**, with an attention panel
 for broken references, unused assets, and the most-referenced assets; filters by

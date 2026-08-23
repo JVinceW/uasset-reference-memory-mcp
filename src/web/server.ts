@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { isMainModule } from "../util/is-main.js";
-import { extname } from "node:path";
+import { extname, join } from "node:path";
 import { GraphStore } from "../store/graph-store.js";
 import { handleApi } from "./api.js";
 import { ensureLiveIndex } from "../snapshot/snapshot.js";
@@ -16,6 +16,7 @@ const MIME: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
+  ".woff2": "font/woff2",
 };
 
 interface Args {
@@ -23,14 +24,36 @@ interface Args {
   port: number;
 }
 
+const USAGE =
+  "usage: unity-asset-reference-mcp-web --project <root> | --db <index.db> [--port 7777]";
+
+/** A flag's value, rejecting a missing one rather than consuming the next flag. */
+function flagValue(argv: string[], index: number, flag: string): string {
+  const value = argv[index];
+  if (value === undefined || value.startsWith("--")) throw new Error(`${flag} expects a value`);
+  return value;
+}
+
 export function parseServerArgs(argv: string[]): Args {
   let dbPath = "";
+  let projectRoot = "";
   let port = 7777;
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--db") dbPath = argv[++i] ?? "";
-    else if (argv[i] === "--port") port = Number.parseInt(argv[++i] ?? "7777", 10);
+    const arg = argv[i];
+    if (arg === "--db") dbPath = flagValue(argv, ++i, "--db");
+    else if (arg === "--project") projectRoot = flagValue(argv, ++i, "--project");
+    else if (arg === "--port") {
+      const raw = flagValue(argv, ++i, "--port");
+      port = Number.parseInt(raw, 10);
+      if (!Number.isFinite(port)) throw new Error(`--port expects a number, got: ${raw}`);
+    }
   }
-  if (!dbPath) throw new Error("usage: unity-asset-reference-mcp-web --db <index.db> [--port 7777]");
+  // `--project <root>` mirrors the MCP server, so both binaries take the same
+  // argument and neither asks the user to spell out .asset-memory/index.db.
+  if (!dbPath) {
+    if (!projectRoot) throw new Error(USAGE);
+    dbPath = join(projectRoot, ".asset-memory", "index.db");
+  }
   return { dbPath, port };
 }
 
