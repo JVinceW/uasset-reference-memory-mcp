@@ -42,7 +42,8 @@
     "benchmark:indexer": "node scripts/benchmark-indexer.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.viewer.json --noEmit",
     "build:viewer": "vite build --config vite.viewer.config.ts",
-    "build": "tsc -p tsconfig.build.json && node scripts/copy-public.mjs && npm run build:viewer",
+    "build:static-viewer": "node scripts/build-static-viewer.mjs",
+    "build": "tsc -p tsconfig.build.json && npm run build:viewer && node scripts/copy-public.mjs",
     "web": "node dist/web/server.js",
     "prepublishOnly": "npm run build"
   },

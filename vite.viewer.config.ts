@@ -37,7 +37,10 @@ export default defineConfig({
   base: "./",
   plugins: [trimFontSubsets(), react()],
   build: {
-    outDir: "../../../dist/web/public/viewer-next",
+    // The viewer is the default UI, so it owns `/` — serveStatic maps a bare
+    // path to index.html with no routing code. copy-public.mjs runs after this
+    // and adds the legacy viewer alongside, so emptying here is safe.
+    outDir: "../../../dist/web/public",
     emptyOutDir: true,
   },
 });

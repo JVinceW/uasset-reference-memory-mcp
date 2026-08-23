@@ -187,14 +187,25 @@ assets or prove freshness, and query tools never trigger hidden indexing.
 ## 3. Web viewer
 
 ```bash
-# server flavor — serves the viewer + a JSON API over the index
 unity-asset-reference-mcp-web --db /path/to/UnityProject/.asset-memory/index.db
 # open http://localhost:7777
 ```
 
-There is also a **static** flavor: open `dist/web/public/viewer.html` in a
-browser and pick a `.db` — it runs the same queries entirely in-browser (WASM
-SQLite), no server. Both share one query layer.
+The viewer renders the dependency graph in **2D or 3D**, with an attention panel
+for broken references, unused assets, and the most-referenced assets; filters by
+asset type and origin; dependency/reference tracing; search; and back/forward
+navigation. It reads the index through the same JSON API the server exposes.
+
+The previous Cytoscape viewer is still bundled at
+**`http://localhost:7777/legacy.html`**.
+
+There is also a **static** flavor that needs no server at all: download
+`asset-graph-viewer-static-<version>.zip` from the
+[releases page](https://github.com/JVinceW/uasset-reference-memory-mcp/releases),
+unzip it, open `viewer.html` in a browser, and pick a `.db`. It runs the same
+queries entirely in-browser via WASM SQLite. It ships as a separate download
+rather than inside the npm package so that every install does not carry ~700 KB
+of WASM it will never load; all flavors share one query layer.
 
 ## Team sharing (snapshots)
 
