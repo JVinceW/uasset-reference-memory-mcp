@@ -1,0 +1,94 @@
+name: Release Artifacts
+
+# Creates the GitHub release for a version tag and attaches the downloads that
+# do not belong in the npm package: the Unity Editor package in its three
+# installable formats, and the server-less web viewer.
+#
+# Tag-triggered on purpose. The documented flow publishes to npm first (see
+# release.yml), verifies the registry, and only then tags — so a tag means the
+# npm release is already real. Nothing here publishes to npm.
+#
+# Needs no Unity licence: every asset in the Unity package carries a committed
+# .meta, which is the only thing a .unitypackage needs Unity to generate.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build the release for (e.g. v0.4.0)"
+        required: true
+
+jobs:
+  artifacts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release and upload assets
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # The artifact builders are covered by scripts/build-artifacts.test.ts;
+      # running the suite here keeps a broken builder from reaching a release.
+      - run: npm test
+
+      - name: Build the web viewer bundle
+        run: npm run build
+
+      - name: Build release artifacts
+        run: |
+          npm run build:unity-artifacts
+          npm run build:static-viewer
+
+      - name: Derive release notes from CHANGELOG.md
+        id: notes
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          # Take the section for this version, stopping at the next `## [`.
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { inside = 1; next }
+            inside && /^## \[/     { exit }
+            inside                 { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "::warning::no CHANGELOG.md section for $VERSION; falling back to generated notes"
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+          fi
+          # A hyphen in the version marks a prerelease, matching ADR 0019 and
+          # the dist-tag rule in release.yml.
+          case "$VERSION" in
+            *-*) echo "prerelease=true"  >> "$GITHUB_OUTPUT" ;;
+            *)   echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Create or update the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          FLAGS=""
+          [ "${{ steps.notes.outputs.prerelease }}" = "true" ] && FLAGS="$FLAGS --prerelease"
+          if [ "${{ steps.notes.outputs.generated }}" = "true" ]; then
+            FLAGS="$FLAGS --generate-notes"
+          else
+            FLAGS="$FLAGS --notes-file RELEASE_NOTES.md"
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # shellcheck disable=SC2086
+            gh release upload "$TAG" dist-unity/* dist-static-viewer/*.zip --clobber
+          else
+            # shellcheck disable=SC2086
+            gh release create "$TAG" --title "$TAG" $FLAGS \
+              dist-unity/* dist-static-viewer/*.zip
+          fi

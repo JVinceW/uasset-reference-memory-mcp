@@ -105,13 +105,31 @@ commit the config and (optional) shared snapshot:
 
 ## 2. Verify parser accuracy (optional)
 
-Verification is a manual accuracy check. Install the Unity Editor exporter
-separately through Unity Package Manager, keeping the Node tool and Unity
-integration independently installable:
+Verification is a manual accuracy check. The Unity Editor exporter installs
+separately from the Node tool, so neither requires the other. It is versioned on
+its own cadence and is **not** part of the npm package.
+
+Pick whichever install suits your team — all four deliver the same package:
+
+| Method | How |
+| --- | --- |
+| **Git URL** | Package Manager → **Add package from git URL** |
+| **Tarball** | download the `.tgz`, then **Add package from tarball** |
+| **Folder** | download and unzip the `.zip`, then **Add package from disk** → pick `package.json` |
+| **`.unitypackage`** | download, then **Assets → Import Package → Custom Package** |
 
 ```text
 https://github.com/JVinceW/uasset-reference-memory-mcp.git?path=/unity/com.jvincew.assetreferencememory#<release-tag>
 ```
+
+The `.tgz`, `.zip`, and `.unitypackage` downloads are attached to each
+[release](https://github.com/JVinceW/uasset-reference-memory-mcp/releases).
+
+The first three install it as a Package Manager package under `Packages/`, which
+is upgradable in place. The `.unitypackage` instead imports the files into
+`Assets/AssetReferenceMemory/`, where Unity does not track it as a package — so
+upgrading means deleting that folder before importing a newer one. Prefer one of
+the first three unless your workflow requires assets in the project tree.
 
 In Unity, run **Tools > Asset Reference Memory > Export Verification**. It
 writes `<project>/.asset-memory/verify.json`. Compare that export with the

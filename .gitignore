@@ -22,3 +22,4 @@ spot-*.mjs
 # Local Git worktrees used for isolated feature development.
 .worktrees/
 dist-static-viewer/
+dist-unity/
