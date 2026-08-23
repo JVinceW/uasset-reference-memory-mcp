@@ -187,14 +187,20 @@ assets or prove freshness, and query tools never trigger hidden indexing.
 ## 4. Web viewer
 
 ```bash
-unity-asset-reference-mcp-web --project /path/to/UnityProject
-# open http://localhost:7777
+cd /path/to/UnityProject
+unity-asset-reference-mcp-web
+# asset graph viewer → http://localhost:7777
 ```
 
-`--project` takes the same argument as the MCP server and the indexer, and
-resolves the index at `<root>/.asset-memory/index.db`. Point at a database
-elsewhere with `--db <index.db>`, and change the port with `--port <n>` — useful
-when serving more than one project at once.
+Run from anywhere inside a Unity project and the server finds the project root
+by walking up, the way `git` locates a repository. Name one explicitly with
+`--project <root>` — the same argument the MCP server and indexer take — or
+point at a database elsewhere with `--db <index.db>`.
+
+The port is chosen automatically: it starts at 7777 and moves to the next free
+one, so several projects can be served at once without configuring anything.
+Pin one with `--port <n>`; if that port is busy the server reports the port it
+used instead of failing. The URL it prints is always the real one.
 
 The viewer renders the dependency graph in **2D or 3D**, with an attention panel
 for broken references, unused assets, and the most-referenced assets; filters by

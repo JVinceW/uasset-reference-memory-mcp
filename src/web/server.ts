@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { isMainModule } from "../util/is-main.js";
+import { findProjectRoot } from "../config/project-root.js";
 import { extname, join } from "node:path";
 import { GraphStore } from "../store/graph-store.js";
 import { handleApi } from "./api.js";
@@ -19,13 +20,18 @@ const MIME: Record<string, string> = {
   ".woff2": "font/woff2",
 };
 
+const DEFAULT_PORT = 7777;
+
 interface Args {
   dbPath: string;
   port: number;
+  /** True when --port was given, so moving off it is worth warning about. */
+  portExplicit?: boolean;
 }
 
 const USAGE =
-  "usage: unity-asset-reference-mcp-web --project <root> | --db <index.db> [--port 7777]";
+  "usage: unity-asset-reference-mcp-web [--project <root>] [--db <index.db>] [--port 7777]\n" +
+  "  with no --project or --db, the Unity project containing the working directory is used";
 
 /** A flag's value, rejecting a missing one rather than consuming the next flag. */
 function flagValue(argv: string[], index: number, flag: string): string {
@@ -34,10 +40,11 @@ function flagValue(argv: string[], index: number, flag: string): string {
   return value;
 }
 
-export function parseServerArgs(argv: string[]): Args {
+export function parseServerArgs(argv: string[], cwd = process.cwd()): Args {
   let dbPath = "";
   let projectRoot = "";
-  let port = 7777;
+  let port = DEFAULT_PORT;
+  let portExplicit = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--db") dbPath = flagValue(argv, ++i, "--db");
@@ -46,18 +53,52 @@ export function parseServerArgs(argv: string[]): Args {
       const raw = flagValue(argv, ++i, "--port");
       port = Number.parseInt(raw, 10);
       if (!Number.isFinite(port)) throw new Error(`--port expects a number, got: ${raw}`);
+      portExplicit = true;
     }
   }
   // `--project <root>` mirrors the MCP server, so both binaries take the same
   // argument and neither asks the user to spell out .asset-memory/index.db.
+  // With neither flag, fall back to the project containing the working
+  // directory, so running inside a Unity project needs no arguments at all.
   if (!dbPath) {
-    if (!projectRoot) throw new Error(USAGE);
-    dbPath = join(projectRoot, ".asset-memory", "index.db");
+    const root = projectRoot || findProjectRoot(cwd);
+    if (!root) throw new Error(USAGE);
+    dbPath = join(root, ".asset-memory", "index.db");
   }
-  return { dbPath, port };
+  return { dbPath, port, portExplicit };
 }
 
-export function startServer(args: Args): ReturnType<typeof createServer> {
+/**
+ * Bind the first free port at or above `from`. Several Unity projects are often
+ * open at once, and the server previously died on an unhandled EADDRINUSE, so
+ * a busy port advances instead of failing.
+ */
+export async function listenOnFreePort(
+  server: ReturnType<typeof createServer>,
+  from: number,
+  attempts = 50,
+): Promise<number> {
+  for (let port = from; port < from + attempts; port++) {
+    const bound = await new Promise<boolean>((resolve, reject) => {
+      const onError = (err: NodeJS.ErrnoException) => {
+        server.removeListener("listening", onListening);
+        if (err.code === "EADDRINUSE") resolve(false);
+        else reject(err);
+      };
+      const onListening = () => {
+        server.removeListener("error", onError);
+        resolve(true);
+      };
+      server.once("error", onError);
+      server.once("listening", onListening);
+      server.listen(port);
+    });
+    if (bound) return port;
+  }
+  throw new Error(`no free port in ${from}-${from + attempts - 1}`);
+}
+
+export async function startServer(args: Args): Promise<ReturnType<typeof createServer>> {
   const store = GraphStore.open(args.dbPath);
 
   const server = createServer(async (req, res) => {
@@ -78,9 +119,11 @@ export function startServer(args: Args): ReturnType<typeof createServer> {
     }
   });
 
-  server.listen(args.port, () => {
-    console.log(`asset graph viewer → http://localhost:${args.port}  (db: ${args.dbPath})`);
-  });
+  const port = await listenOnFreePort(server, args.port);
+  if (args.portExplicit && port !== args.port) {
+    console.warn(`port ${args.port} is in use; serving on ${port} instead`);
+  }
+  console.log(`asset graph viewer → http://localhost:${port}  (db: ${args.dbPath})`);
   return server;
 }
 
@@ -105,7 +148,7 @@ if (isMainModule(import.meta.url)) {
   (async () => {
     const args = parseServerArgs(process.argv.slice(2));
     await ensureLiveIndex(args.dbPath); // restore from snapshot if the live index is absent
-    startServer(args);
+    await startServer(args);
   })().catch((err: unknown) => {
     console.error(err instanceof Error ? err.message : String(err));
     process.exit(1);

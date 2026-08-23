@@ -1,6 +1,9 @@
+import { createServer } from "node:http";
+import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, test } from "vitest";
-import { parseServerArgs } from "./server.js";
+import { afterAll, describe, expect, test } from "vitest";
+import { listenOnFreePort, parseServerArgs } from "./server.js";
 
 const DB_IN = join("/proj", ".asset-memory", "index.db");
 
@@ -33,5 +36,54 @@ describe("parseServerArgs", () => {
 
   test("reports a missing value rather than silently using the next flag", () => {
     expect(() => parseServerArgs(["--project", "--port", "8080"])).toThrow();
+  });
+
+  test("falls back to the project containing the working directory", () => {
+    const root = mkdtempSync(join(tmpdir(), "uasset-cwd-"));
+    mkdirSync(join(root, ".asset-memory"));
+    const nested = join(root, "Assets", "Art");
+    mkdirSync(nested, { recursive: true });
+    try {
+      expect(parseServerArgs([], nested).dbPath).toBe(join(root, ".asset-memory", "index.db"));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("errors when the working directory is not inside a project", () => {
+    const outside = mkdtempSync(join(tmpdir(), "uasset-nowhere-"));
+    try {
+      expect(() => parseServerArgs([], outside)).toThrow(/--project|--db/);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("listenOnFreePort", () => {
+  const open: ReturnType<typeof createServer>[] = [];
+  const serve = () => {
+    const s = createServer();
+    open.push(s);
+    return s;
+  };
+  afterAll(() => {
+    for (const s of open) s.close();
+  });
+
+  test("binds the requested port when it is free", async () => {
+    expect(await listenOnFreePort(serve(), 7912)).toBe(7912);
+  });
+
+  test("advances past a busy port instead of throwing EADDRINUSE", async () => {
+    const first = await listenOnFreePort(serve(), 7913);
+    const second = await listenOnFreePort(serve(), 7913);
+    expect(first).toBe(7913);
+    expect(second).toBeGreaterThan(first);
+  });
+
+  test("gives up with a clear message when the whole range is taken", async () => {
+    await listenOnFreePort(serve(), 7920);
+    await expect(listenOnFreePort(serve(), 7920, 1)).rejects.toThrow(/no free port/);
   });
 });
