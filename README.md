@@ -37,6 +37,24 @@ npm install -g unity-asset-reference-mcp@next
 sh scripts/install.sh --package unity-asset-reference-mcp@next
 ```
 
+### Upgrading
+
+From **0.3.x** there is nothing to do. The index schema is unchanged at version
+3, so an existing `<project>/.asset-memory/index.db` is read as-is — no reindex,
+no config change.
+
+From **0.2.x** the index must be rebuilt from schema 2 to 3. The indexer detects
+this and rebuilds on the next `index_project` or `index` run; no flag or manual
+migration is needed. Until then, MCP read tools return a `schema-mismatch` error
+naming the fix rather than answering from an incompatible index.
+
+Two behavior changes to expect when upgrading to 0.4.0:
+
+- The viewer served at `/` is the new one; the previous viewer moved to
+  `/legacy.html`.
+- `search_assets` (and `/api/search`) now match an asset's path and GUID prefix
+  as well as its name, so the same query returns more results than in 0.3.2.
+
 Installer scripts are also available for users who prefer one command with
 Node/npm checks and command verification:
 

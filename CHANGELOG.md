@@ -12,10 +12,17 @@ Prereleases publish to npm under the `next` dist-tag and never displace
 tag and uses it as the GitHub release notes, so headings here become the
 release page.
 
-## [0.4.0-rc.1] - 2026-08-23
+## [0.4.0] - 2026-08-23
 
-First release candidate for 0.4.0. Install with
-`npm install -g unity-asset-reference-mcp@next`.
+Upgrading from 0.3.x needs nothing: the index schema is unchanged at version 3,
+so an existing `.asset-memory/index.db` is read as-is. Upgrading from 0.2.x
+requires a reindex from schema 2, which the indexer performs automatically on
+the next run — no flag and no manual migration.
+
+Two changes are worth knowing before upgrading: the web viewer served at `/` is
+the new one, with the previous viewer moved to `/legacy.html`; and
+`search_assets` now matches an asset's path and GUID prefix as well as its name,
+so the same query returns more results than in 0.3.2.
 
 ### Added
 
