@@ -442,7 +442,9 @@ Responsibilities:
 - [ ] Keep graph positions unchanged while entering or exiting trace mode.
 - [ ] Render blast-radius counts by hop and asset type.
 - [x] Implement command/search palette with 120ms debounce.
-- [x] Search by name, path, and GUID prefix, grouped by asset type.
+- [ ] Search by name, path, and GUID prefix, grouped by asset type.
+  (name/path/GUID-prefix matching ships; results render as a flat list with a
+  type-coloured dot, so the grouping half is still open.)
 - [ ] Support keyboard actions for focus, trace upstream, isolate closure, and
   escape close.
 - [ ] Add focused tests for trace state and search result normalization.

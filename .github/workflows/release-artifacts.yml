@@ -56,7 +56,7 @@ jobs:
           # Take the section for this version, stopping at the next `## [`.
           awk -v v="$VERSION" '
             $0 ~ "^## \\[" v "\\]" { inside = 1; next }
-            inside && /^## \[/     { exit }
+            inside && /^## /       { exit }
             inside                 { print }
           ' CHANGELOG.md > RELEASE_NOTES.md
           if [ ! -s RELEASE_NOTES.md ]; then

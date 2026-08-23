@@ -7,7 +7,7 @@ Date: 2026-08-05
 Capture the current Node.js indexer baseline and compare it with bounded
 parallel filesystem scanning and YAML reference extraction. This report is the
 benchmark record for
-[`2026-08-05-indexer-parallelism-benchmark.md`](../plans/active/2026-08-05-indexer-parallelism-benchmark.md).
+[`2026-08-05-indexer-parallelism-benchmark.md`](../plans/completed/2026-08-05-indexer-parallelism-benchmark.md).
 
 ## Current Pipeline
 

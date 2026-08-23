@@ -35,6 +35,31 @@ describe("async concurrency helpers", () => {
     expect(active).toBe(0);
   });
 
+  test("AsyncLimiter does not admit a newcomer into a slot being handed over", async () => {
+    // The regression this guards: releasing used to drop `active` and then wake
+    // a waiter, so an `acquire` landing in the microtask between the two saw
+    // room and took the slot the waiter was already promised. Both then ran.
+    // Reproducing it needs a *fresh* acquire arriving mid-handover — a pool of
+    // pre-queued tasks never exercises it — and the newcomer must hold its slot
+    // across a tick for the overlap to be observable.
+    const limiter = new AsyncLimiter(1);
+    let active = 0;
+    let peak = 0;
+    const track = async (yields: number) => {
+      active += 1;
+      peak = Math.max(peak, active);
+      for (let i = 0; i < yields; i++) await Promise.resolve();
+      active -= 1;
+    };
+    const first = limiter.run(() => track(0));
+    const queued = limiter.run(() => track(0));
+    const newcomer = Promise.resolve()
+      .then(() => {})
+      .then(() => limiter.run(() => track(1)));
+    await Promise.all([first, queued, newcomer]);
+    expect(peak).toBe(1);
+  });
+
   test("AsyncLimiter frees its slot when a task throws", async () => {
     const limiter = new AsyncLimiter(1);
     await expect(limiter.run(async () => { throw new Error("boom"); })).rejects.toThrow("boom");

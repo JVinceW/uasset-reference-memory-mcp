@@ -73,7 +73,9 @@ Tradeoffs:
 
 - Prerelease versions consume version numbers under the target release, so
   `0.4.0-rc.1` and `0.4.0` are distinct immutable publishes.
-- Promotion is a manual `npm dist-tag` step after the stable publish.
+- Promotion happens by releasing the stable version, which the release workflow
+  publishes to `latest` on its own; no manual dist-tag step is involved. Moving
+  `next` forward afterwards is optional housekeeping.
 
 ## Follow-Up
 

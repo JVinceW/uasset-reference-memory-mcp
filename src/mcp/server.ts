@@ -84,7 +84,7 @@ function parseCtx(argv: string[]): ToolCtx {
     else if (argv[i] === "--project") projectRoot = argv[++i];
   }
   if (!dbPath) {
-    if (!projectRoot) throw new Error("usage: asset-reference-mcp-server --project <root> | --db <index.db>");
+    if (!projectRoot) throw new Error("usage: unity-asset-reference-mcp --project <root> | --db <index.db>");
     dbPath = join(projectRoot, ".asset-memory", "index.db");
   }
   return { dbPath, projectRoot };
