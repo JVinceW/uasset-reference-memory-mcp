@@ -97,17 +97,6 @@ so the same query returns more results than in 0.3.2.
 - The Unity Editor package is versioned independently and remains at `0.2.0`; it
   is unchanged in this release.
 
-## [0.4.0-rc.1] - 2026-08-23
-
-Release candidate for 0.4.0, published under the `next` dist-tag so it never
-displaced `latest`. It carries the same change set as 0.4.0 above; the stable
-release adds only the upgrade guidance in the section above and this entry.
-
-Installed with `npm install -g unity-asset-reference-mcp@next`. It remains on
-npm and installable by exact version; `@next` follows whichever prerelease is
-most recent. Anyone running it should move to 0.4.0, which is identical in
-behavior.
-
 ## Earlier releases
 
 `0.3.2` and earlier predate this file. See the
