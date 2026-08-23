@@ -46,8 +46,13 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliArgs {
     else if (arg === "--verify") verifyJsonPath = argv[++i];
     else if (arg === "--unity") unityVersion = argv[++i];
     else if (arg === "--concurrency") {
-      const value = Number(argv[++i]);
-      if (Number.isFinite(value)) concurrency = value;
+      const raw = argv[++i];
+      // Silently ignoring this used to turn `--concurrency --force` into a
+      // dropped value *and* a dropped --force, with no output either way.
+      if (raw === undefined || raw.startsWith("--")) throw new Error("--concurrency expects a number");
+      const value = Number(raw);
+      if (!Number.isFinite(value)) throw new Error(`--concurrency expects a number, got: ${raw}`);
+      concurrency = value;
     }
     else if (!arg.startsWith("--")) root = arg;
   }

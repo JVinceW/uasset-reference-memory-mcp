@@ -29,6 +29,14 @@ Force Text** (Unity's default for version control).
 npm install -g unity-asset-reference-mcp
 ```
 
+Prereleases publish under the `next` dist-tag, so `latest` always resolves to
+the current stable release. To try a release candidate:
+
+```bash
+npm install -g unity-asset-reference-mcp@next
+sh scripts/install.sh --package unity-asset-reference-mcp@next
+```
+
 Installer scripts are also available for users who prefer one command with
 Node/npm checks and command verification:
 
@@ -296,7 +304,7 @@ not migrated in place.
 ```bash
 npm install
 npm test        # vitest
-npm run build   # tsc + copy web assets to dist/
+npm run build   # tsc + Vite viewer bundle + copy web assets to dist/
 npm run benchmark:indexer  # controlled 2,000-asset concurrency benchmark
 ```
 

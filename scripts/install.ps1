@@ -78,7 +78,7 @@ $bins = @(
 
 foreach ($bin in $bins) {
   if (-not (Get-Command $bin -ErrorAction SilentlyContinue)) {
-    Write-Error "Installed package, but '$bin' is not on PATH. Check npm global bin path with: npm bin -g"
+    Write-Error "Installed package, but '$bin' is not on PATH. Check npm global bin path with: npm prefix -g"
     exit 1
   }
 }

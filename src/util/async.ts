@@ -46,9 +46,20 @@ export class AsyncLimiter {
     try {
       return await task();
     } finally {
-      this.active -= 1;
-      this.pending.shift()?.();
+      this.release();
     }
+  }
+
+  /**
+   * Hand the slot straight to the next waiter instead of freeing it. Dropping
+   * `active` first would open a window between this call and the waiter's
+   * continuation in which another `acquire` sees room and takes the same slot,
+   * letting both run and briefly exceed the limit.
+   */
+  private release(): void {
+    const next = this.pending.shift();
+    if (next) next();
+    else this.active -= 1;
   }
 
   private async acquire(): Promise<void> {
@@ -56,7 +67,7 @@ export class AsyncLimiter {
       this.active += 1;
       return;
     }
+    // No increment on wake: the releasing task passed its slot to us.
     await new Promise<void>((resolve) => this.pending.push(resolve));
-    this.active += 1;
   }
 }

@@ -23,6 +23,20 @@ describe("parseArgs", () => {
     expect(a.dbPath).toBe("/x/y.db");
     expect(a.unityVersion).toBe("2022.3");
     expect(a.concurrency).toBe(4);
+  });
+
+  test("rejects a non-numeric --concurrency instead of ignoring it", () => {
+    expect(() => parseArgs(["index", "--concurrency", "abc", "/proj"])).toThrow(/--concurrency/);
+  });
+
+  test("rejects --concurrency with no value rather than eating the next flag", () => {
+    expect(() => parseArgs(["index", "--concurrency", "--force", "/proj"])).toThrow(/--concurrency/);
+  });
+
+  test("keeps --force when --concurrency has a real value", () => {
+    const a = parseArgs(["index", "--concurrency", "8", "--force", "/proj"]);
+    expect(a.concurrency).toBe(8);
+    expect(a.force).toBe(true);
     expect(a.projectRoot).toBe("/proj");
   });
 

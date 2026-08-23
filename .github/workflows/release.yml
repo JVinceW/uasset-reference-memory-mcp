@@ -37,8 +37,11 @@ jobs:
           # A SemVer prerelease carries a hyphenated identifier (0.4.0-rc.1).
           # Those publish under `next` so `latest` — what a bare `npm install`
           # and scripts/install.sh resolve to — keeps pointing at the current
-          # stable release. Promote a soaked prerelease with:
-          #   npm dist-tag add "$NAME@$VERSION" latest
+          # stable release.
+          #
+          # A soaked prerelease is promoted by releasing the stable version that
+          # follows it, which this job then publishes to `latest` on its own.
+          # Never move `latest` onto the prerelease itself; see ADR 0019.
           case "$VERSION" in
             *-*) TAG=next ;;
             *)   TAG=latest ;;

@@ -107,7 +107,7 @@ fi
 for bin in unity-asset-reference-mcp unity-asset-reference-mcp-index unity-asset-reference-mcp-web; do
   if ! command -v "$bin" >/dev/null 2>&1; then
     echo "Installed package, but '$bin' is not on PATH." >&2
-    echo "Check npm global bin path: npm bin -g" >&2
+    echo "Check npm global bin path: npm prefix -g" >&2
     exit 1
   fi
 done
