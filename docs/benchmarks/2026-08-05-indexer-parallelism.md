@@ -132,6 +132,17 @@ The controlled fixture shows approximately 5x lower total time at concurrency
 fixture result, not a prediction for `slot-4`. SQLite write time remains nearly
 flat, supporting the decision to keep database writes serialized.
 
+**Re-run on different hardware, 2026-08-23:** the same fixture and script
+re-measured on macOS (8 logical CPUs, Node 24, APFS) gave a smaller speedup at
+concurrency 8 - approximately 2.7x (295.0 ms -> 109.9 ms), not 7x. Both numbers
+are real; they are not the same machine. This table's Environment section above
+was never filled in (OS/Node/CPU/Storage all read "To record"), which is why
+the discrepancy went unnoticed until a downstream document (ADR 0020) cited the
+macOS figure and this table still carried the original one. Treat concurrency
+speedup on this fixture as hardware-dependent, and prefer the real-project
+numbers in `docs/plans/active/2026-08-21-index-write-path-benchmark.md`
+over either fixture figure for anything that needs to generalize.
+
 Command:
 
 `npm run benchmark:indexer`
