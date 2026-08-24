@@ -21,7 +21,10 @@ Force Text** (Unity's default for version control).
 
 - Node.js ≥ 20
 - A Unity project using **Force Text** serialization
-- `better-sqlite3` builds via prebuilt binaries during install (native module)
+- `better-sqlite3` (native module) downloads a prebuilt binary for your
+  platform during install — no compiler needed on common platforms and Node
+  versions. If none matches, it falls back to building from source, which
+  needs Python and a C++ toolchain.
 
 ## Install
 
